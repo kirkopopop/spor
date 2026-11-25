@@ -9,7 +9,10 @@ export function safeNext(next: string | null | undefined, fallback = "/"): strin
     const base = "http://local.invalid";
     const url = new URL(next, base);
     if (url.origin !== base) return fallback;
-    return url.pathname + url.search + url.hash;
+    // Normalising can still yield "//host" (e.g. "/.//evil.example"): check the result too.
+    const out = url.pathname + url.search + url.hash;
+    if (!out.startsWith("/") || out.startsWith("//") || out.startsWith("/\\")) return fallback;
+    return out;
   } catch {
     return fallback;
   }
