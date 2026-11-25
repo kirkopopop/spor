@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { isTrustedRedirect, redirectHost } from "@/lib/trustedClient";
 
 // Supabase's OAuth server sends claude.ai's sign-in here (Authorization Path).
 // Signed in already (the proxy guarantees it), so this only asks: let Claude in?
-type Details = { id: string; client: string; redirect?: string };
+type Details = { id: string; client: string; host: string; trusted: boolean };
 type State = { kind: "loading" } | { kind: "ask"; details: Details } | { kind: "busy" } | { kind: "error" };
 
 export default function Consent() {
@@ -18,14 +19,25 @@ export default function Consent() {
       .auth.oauth.getAuthorizationDetails(id)
       .then(({ data, error }) => {
         if (error || !data) return setState({ kind: "error" });
-        // Already approved before: Supabase hands back where to continue.
-        if (!("authorization_id" in data)) return window.location.assign(data.redirect_url);
-        setState({ kind: "ask", details: { id, client: data.client?.name || "An app" } });
+        // Already approved before: Supabase hands back where to continue (only ever to Claude).
+        if (!("authorization_id" in data)) {
+          return isTrustedRedirect(data.redirect_url) ? window.location.assign(data.redirect_url) : setState({ kind: "error" });
+        }
+        setState({
+          kind: "ask",
+          details: {
+            id,
+            client: data.client?.name || "An app",
+            host: redirectHost(data.redirect_uri),
+            trusted: isTrustedRedirect(data.redirect_uri),
+          },
+        });
       });
   }, []);
 
   async function decide(approve: boolean) {
     if (state.kind !== "ask") return;
+    if (approve && !state.details.trusted) return; // never hand a code to anyone but Claude
     const id = state.details.id;
     setState({ kind: "busy" });
     const oauth = supabase().auth.oauth;
@@ -46,10 +58,17 @@ export default function Consent() {
           <p className="mt-6 text-[17px] leading-snug">
             <b className="font-semibold">{state.details.client}</b> wants to read and edit your trips.
           </p>
+          <p className={`mt-2 text-sm ${state.details.trusted ? "text-muted" : "font-semibold text-accent-ink"}`}>
+            {state.details.trusted
+              ? `Returns to ${state.details.host}.`
+              : `Not Claude: it would send access to ${state.details.host}.`}
+          </p>
           <div className="mt-8 flex flex-col gap-3">
-            <button onClick={() => decide(true)} className="h-12 rounded-[14px] bg-ink text-[15px] font-semibold text-white">
-              Allow
-            </button>
+            {state.details.trusted && (
+              <button onClick={() => decide(true)} className="h-12 rounded-[14px] bg-ink text-[15px] font-semibold text-white">
+                Allow
+              </button>
+            )}
             <button onClick={() => decide(false)} className="h-12 rounded-[14px] border border-line bg-card text-[15px]">
               Deny
             </button>
