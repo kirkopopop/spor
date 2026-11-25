@@ -3,6 +3,9 @@
 import { useSyncExternalStore } from "react";
 import { createStore, get, set } from "idb-keyval";
 import { applyOps, type Op, type StopPatch } from "./ops";
+import { rowsToTrip, TRIP_SELECT, type TripRow } from "./db";
+import { hasSupabase } from "./supabase/env";
+import { supabase } from "./supabase/client";
 import type { Trip } from "./types";
 
 /**
@@ -32,21 +35,51 @@ function setState(next: Partial<State>) {
 }
 
 async function fetchSnapshots(): Promise<Trip[]> {
+  if (hasSupabase) {
+    const { data, error } = await supabase().from("trips").select(TRIP_SELECT).order("start_date");
+    if (error) throw error;
+    return (data as TripRow[]).map(rowsToTrip);
+  }
   const res = await fetch("/api/trips", { cache: "no-store" });
   if (!res.ok) throw new Error(`trips: ${res.status}`);
   return res.json();
 }
 
-// No server write path yet: edits stay queued (and applied) on this phone.
+/** Sends queued edits in order; returns the ids the server has applied. Stops at the first failure. */
 async function pushOps(ops: Op[]): Promise<string[]> {
-  void ops;
-  return [];
+  if (!hasSupabase) return []; // seed mode: edits stay queued and applied on this phone
+  const done: string[] = [];
+  for (const op of ops) {
+    const { error } = await supabase().rpc("apply_stop_patch", { op_id: op.id, stop_id: op.stopId, patch: op.patch });
+    if (error) break;
+    done.push(op.id);
+  }
+  return done;
 }
+
+// The other phone's edits (and Claude's writes) arrive as change events; refetch shortly after.
+function listenForChanges() {
+  if (!hasSupabase) return;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const later = () => {
+    clearTimeout(timer);
+    timer = setTimeout(sync, 400);
+  };
+  const channel = supabase().channel("spor-trips");
+  for (const table of ["trips", "days", "stops", "bookings", "expenses", "notes"]) {
+    channel.on("postgres_changes", { event: "*", schema: "public", table }, later);
+  }
+  channel.subscribe();
+}
+
+// The phone's copy belongs to whoever is signed in: keys are prefixed with their user id.
+let owner = "local";
+const key = (k: string) => `${owner}:${k}`;
 
 async function persist() {
   if (!idb) return;
   try {
-    await Promise.all([set("snapshots", state.snapshots, idb), set("outbox", state.outbox, idb)]);
+    await Promise.all([set(key("snapshots"), state.snapshots, idb), set(key("outbox"), state.outbox, idb)]);
   } catch {
     // Private mode or storage full: the session still works from memory.
   }
@@ -70,8 +103,13 @@ function start() {
   started = true;
   (async () => {
     try {
+      if (hasSupabase) {
+        // Reads the session from cookies on the phone: works offline.
+        const { data } = await supabase().auth.getSession();
+        if (data.session) owner = data.session.user.id;
+      }
       if (idb) {
-        const [snapshots, outbox] = await Promise.all([get<Trip[]>("snapshots", idb), get<Op[]>("outbox", idb)]);
+        const [snapshots, outbox] = await Promise.all([get<Trip[]>(key("snapshots"), idb), get<Op[]>(key("outbox"), idb)]);
         setState({ snapshots: snapshots ?? [], outbox: outbox ?? [] });
       }
     } catch {
@@ -81,6 +119,7 @@ function start() {
     await sync();
     setState({ loaded: true });
   })();
+  listenForChanges();
   window.addEventListener("online", () => sync());
   window.addEventListener("offline", () => setState({ online: false }));
   document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && sync());

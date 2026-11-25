@@ -36,7 +36,7 @@ export function applyOps(trip: Trip, ops: Op[]): Trip {
 }
 
 /** Minutes into the travel day; 00:00–04:59 belongs to the night before. */
-const dayMinute = (t: string) => {
+export const dayMinute = (t: string) => {
   const [h, m] = t.split(":").map(Number);
   return (h < 5 ? h + 24 : h) * 60 + m;
 };
