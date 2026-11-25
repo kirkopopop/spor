@@ -62,6 +62,28 @@ describe("rowsToTrip", () => {
     expect(trip.spare[0]).toMatchObject({ name: "Deutsches Museum", indoor: true, minutes: 120 });
   });
 
+  it("carries the revision, notes (newest first) and expenses", () => {
+    const t = rowsToTrip({
+      ...row,
+      revision: 7,
+      notes: [
+        { id: "n1", trip_id: "t1", stop_id: null, day_id: "d1", author: "u1", body: "Older", created_at: "2026-12-01T10:00:00Z" },
+        { id: "n2", trip_id: "t1", stop_id: "s1", day_id: null, author: "u2", body: "Newer", created_at: "2026-12-02T10:00:00Z" },
+      ],
+      expenses: [
+        { id: "e1", trip_id: "t1", amount: "12.50", currency: "EUR", category: "food", paid_by: "u1", stop_id: null, note: null, spent_at: "2026-12-21T12:00:00Z" },
+      ],
+    });
+    expect(t.revision).toBe(7);
+    expect(t.notes).toEqual([
+      { id: "n2", body: "Newer", authorId: "u2", stopId: "s1", createdAt: "2026-12-02T10:00:00Z" },
+      { id: "n1", body: "Older", authorId: "u1", dayId: "d1", createdAt: "2026-12-01T10:00:00Z" },
+    ]);
+    expect(t.expenses).toEqual([
+      { id: "e1", amount: 12.5, currency: "EUR", category: "food", paidBy: "u1", spentAt: "2026-12-21T12:00:00Z" },
+    ]);
+  });
+
   it("keeps an explicit false, e.g. an outdoor idea", () => {
     const outdoor = rowsToTrip({ ...row, spare_ideas: [{ ...row.spare_ideas[0], indoor: false }] });
     expect(outdoor.spare[0].indoor).toBe(false);

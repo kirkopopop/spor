@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Suspense } from "react";
+import { RegisterSW } from "@/components/RegisterSW";
 import "./globals.css";
 
 const inter = Inter({
@@ -12,6 +13,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "spor",
   description: "Trips, planned and lived.",
+  appleWebApp: { capable: true, title: "spor", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
@@ -25,6 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} antialiased`}>
       <body className="font-sans">
+        <RegisterSW />
         {/* Every screen is private, per-user data read at request time, so it all streams. */}
         <Suspense>
           <div className="mx-auto flex min-h-dvh max-w-[440px] flex-col">{children}</div>

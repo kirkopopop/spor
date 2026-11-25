@@ -41,7 +41,7 @@ export type Stop = {
   options?: StopOption[];
   pickOne?: boolean;
   pickedOptionId?: string;
-  doneAt?: string;
+  doneAt?: string | null; // null = unticked (must survive JSON, unlike undefined)
 };
 
 export type Day = {
@@ -82,8 +82,32 @@ export type SpareIdea = {
   mapsQuery?: string;
 };
 
+export type Note = {
+  id: string;
+  body: string;
+  authorId?: string; // set by the database; missing on a note still queued on this phone
+  via?: "claude"; // written by someone's Claude through the connector
+  stopId?: string;
+  dayId?: string;
+  createdAt: string;
+};
+
+export type Expense = {
+  id: string;
+  amount: number;
+  currency: Trip["currency"];
+  category: string;
+  paidBy?: string; // user id
+  stopId?: string;
+  note?: string;
+  spentAt: string;
+};
+
+export type Member = { userId: string; name: string };
+
 export type Trip = {
   id: string;
+  revision?: number; // bumps on every change inside the trip; Claude's writes must quote it
   name: string;
   stage: Stage;
   startDate: string;
@@ -96,4 +120,6 @@ export type Trip = {
   bookings: Booking[];
   budget: BudgetLine[];
   spare: SpareIdea[];
+  notes?: Note[];
+  expenses?: Expense[];
 };

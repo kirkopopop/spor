@@ -1,9 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { money, plannedTotal } from "@/lib/format";
-import type { Booking, Trip } from "@/lib/types";
+import { settle, spentByCategory } from "@/lib/money";
+import { deleteExpense, deleteNote, useHousehold } from "@/lib/store";
+import type { Booking, Note, Trip } from "@/lib/types";
 import { Back, Check } from "./icons";
 import { Fold } from "./Fold";
+import { Sheet } from "./Sheet";
+import { ExpenseForm, NoteForm } from "./Forms";
 
 function TabHeader({ trip, onBack }: { trip: Trip; onBack: () => void }) {
   return (
@@ -11,7 +16,7 @@ function TabHeader({ trip, onBack }: { trip: Trip; onBack: () => void }) {
       <button
         onClick={onBack}
         aria-label="Back to plan"
-        className="flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-card"
+        className="press flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-card"
       >
         <Back size={18} />
       </button>
@@ -75,56 +80,140 @@ function BookingList({ bookings, trip }: { bookings: Booking[]; trip: Trip }) {
   );
 }
 
-export function MoneyTab({ trip, onBack }: { trip: Trip; onBack: () => void }) {
-  // Expenses arrive with Supabase; until then everything is planned, nothing spent.
-  const spent = 0;
+export function MoneyTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) {
+  const { members, me } = useHousehold();
+  const [adding, setAdding] = useState(false);
+  const expenses = trip.expenses ?? [];
+  const byCat = spentByCategory(expenses);
+  const spent = expenses.reduce((n, e) => n + e.amount, 0);
   const planned = plannedTotal(trip);
-  // TODO(auth): "split with" names the other household member, not a hard-coded traveller.
-  const others = trip.people.filter((p) => p !== "Kirill");
+  const balance = settle(expenses, members, me);
+  const name = (id?: string) => (id === me ? "You" : members.find((m) => m.userId === id)?.name ?? "");
+  const lines = [
+    ...trip.budget,
+    ...Object.keys(byCat)
+      .filter((c) => !trip.budget.some((b) => b.category === c))
+      .map((c) => ({ category: c, label: c[0].toUpperCase() + c.slice(1), planned: 0 })),
+  ];
+
   return (
     <>
-      <TabHeader trip={trip} onBack={onBack} />
-      <main className="flex-1 px-5 pt-5 pb-6">
-        <div className="mb-2 flex items-baseline justify-between">
-          <h2 className="text-[15px] font-semibold">Money</h2>
-          {others.length > 0 && <span className="text-[13px] text-muted">split with {others[0]}</span>}
-        </div>
-        {trip.budget.length === 0 ? (
-          <Empty>None yet.</Empty>
-        ) : (
-          <div className="rounded-[18px] border border-line bg-card px-3.5 py-4">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-[26px] font-bold tracking-[-0.02em]">{money(spent, trip.currency)}</span>
-              <span className="text-sm text-muted">of {money(planned, trip.currency)} planned</span>
+      {onBack && <TabHeader trip={trip} onBack={onBack} />}
+      <main className="flex flex-1 flex-col gap-5 px-5 pt-5 pb-6">
+        <section>
+          <div className="mb-2 flex items-baseline justify-between">
+            <h2 className="text-[15px] font-semibold">Money</h2>
+            {balance && (
+              <span className="text-[13px] text-muted">
+                {balance.owesMe > 0
+                  ? `${balance.with} owes you ${money(balance.owesMe, trip.currency)}`
+                  : balance.owesMe < 0
+                    ? `You owe ${balance.with} ${money(-balance.owesMe, trip.currency)}`
+                    : `Even with ${balance.with}`}
+              </span>
+            )}
+          </div>
+          {lines.length === 0 && expenses.length === 0 ? (
+            <Empty>None yet.</Empty>
+          ) : (
+            <div className="rounded-[18px] border border-line bg-card px-3.5 py-4">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[26px] font-bold tracking-[-0.02em]">{money(spent, trip.currency)}</span>
+                {planned > 0 && <span className="text-sm text-muted">of {money(planned, trip.currency)} planned</span>}
+              </div>
+              {planned > 0 && (
+                <div className="mt-3 h-2 overflow-hidden rounded bg-divider">
+                  <div className="h-full bg-ink" style={{ width: `${Math.min(100, (spent / planned) * 100)}%` }} />
+                </div>
+              )}
+              <ul className="mt-4 flex flex-col gap-2.5 text-sm">
+                {lines.map((b) => (
+                  <li key={b.category} className="flex justify-between">
+                    <span>{b.label}</span>
+                    <span>
+                      <b className="font-semibold">{money(byCat[b.category] ?? 0, trip.currency)}</b>
+                      {b.planned > 0 && <span className="text-muted"> / {Math.round(b.planned).toLocaleString("en-GB")}</span>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <div className="mt-3 h-2 overflow-hidden rounded bg-divider">
-              <div className="h-full bg-ink" style={{ width: `${planned ? Math.min(100, (spent / planned) * 100) : 0}%` }} />
-            </div>
-            <ul className="mt-4 flex flex-col gap-2.5 text-sm">
-              {trip.budget.map((b) => (
-                <li key={b.category} className="flex justify-between">
-                  <span>{b.label}</span>
-                  <span>
-                    <b className="font-semibold">{money(0, trip.currency)}</b>{" "}
-                    <span className="text-muted">/ {Math.round(b.planned).toLocaleString("en-GB")}</span>
-                  </span>
+          )}
+        </section>
+
+        <button onClick={() => setAdding(true)} className="press h-12 rounded-[14px] border border-line bg-card text-[15px] font-semibold">
+          Add expense
+        </button>
+
+        {expenses.length > 0 && (
+          <Fold label={`${expenses.length} expenses`}>
+            <ul className="divide-y divide-divider rounded-[18px] border border-line bg-card px-3.5">
+              {[...expenses].reverse().map((e) => (
+                <li key={e.id} className="flex items-center gap-3 py-3 text-sm">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate">{e.note || e.category}</div>
+                    <div className="text-xs text-muted">{name(e.paidBy)}</div>
+                  </div>
+                  <span className="font-semibold">{money(e.amount, trip.currency)}</span>
+                  <button onClick={() => deleteExpense(trip.id, e.id)} aria-label={`Delete ${e.note || e.category}`} className="text-xs text-muted">
+                    Delete
+                  </button>
                 </li>
               ))}
             </ul>
-          </div>
+          </Fold>
         )}
       </main>
+      <Sheet open={adding} onClose={() => setAdding(false)} label="Add expense">
+        <ExpenseForm trip={trip} onDone={() => setAdding(false)} />
+      </Sheet>
     </>
   );
 }
 
-export function NotesTab({ trip, onBack }: { trip: Trip; onBack: () => void }) {
+/** One note row: who, when, where, what. */
+export function NoteItem({ note, trip, showWhere = true }: { note: Note; trip: Trip; showWhere?: boolean }) {
+  const { members, me } = useHousehold();
+  const person = note.authorId === me || !note.authorId ? "You" : members.find((m) => m.userId === note.authorId)?.name ?? "Someone";
+  const who = note.via === "claude" ? "Claude" : person;
+  const stop = note.stopId ? trip.days.flatMap((d) => d.stops).find((s) => s.id === note.stopId) : undefined;
+  const day = note.dayId ? trip.days.find((d) => d.id === note.dayId) : undefined;
+  const where = stop ? stop.name : day ? day.title || day.date : undefined;
+  const when = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: trip.timezone }).format(new Date(note.createdAt));
+  return (
+    <li className="py-3">
+      <div className="flex items-baseline justify-between gap-3 text-xs text-muted">
+        <span>
+          <b className="font-semibold text-ink-2">{who}</b>
+          {showWhere && where && ` · ${where}`}
+        </span>
+        <span className="shrink-0">{when}</span>
+      </div>
+      <p className="mt-1 text-[15px] leading-snug whitespace-pre-wrap">{note.body}</p>
+      {note.authorId === me && note.via !== "claude" && (
+        <button onClick={() => deleteNote(trip.id, note.id)} className="mt-1 text-xs text-muted">
+          Delete
+        </button>
+      )}
+    </li>
+  );
+}
+
+export function NotesTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) {
+  const notes = trip.notes ?? [];
   return (
     <>
-      <TabHeader trip={trip} onBack={onBack} />
-      <main className="flex-1 px-5 pt-5 pb-6">
-        <h2 className="mb-2 text-[15px] font-semibold">Notes</h2>
-        <p className="text-sm text-muted">None yet.</p>
+      {onBack && <TabHeader trip={trip} onBack={onBack} />}
+      <main className="flex flex-1 flex-col gap-4 px-5 pt-5 pb-6">
+        <h2 className="text-[15px] font-semibold">Notes</h2>
+        <NoteForm tripId={trip.id} />
+        {notes.length === 0 ? (
+          <p className="text-sm text-muted">None yet.</p>
+        ) : (
+          <ul className="divide-y divide-divider rounded-[18px] border border-line bg-card px-3.5">
+            {notes.map((n) => <NoteItem key={n.id} note={n} trip={trip} />)}
+          </ul>
+        )}
       </main>
     </>
   );

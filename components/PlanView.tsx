@@ -9,6 +9,8 @@ import { BackButton, StageIndicator } from "./TripHeader";
 import { Chevron, Mode } from "./icons";
 import { Sheet } from "./Sheet";
 import { StopDetail } from "./StopDetail";
+import { StopForm } from "./Forms";
+import { NoteItem } from "./TripTabs";
 
 export function PlanView({ trip }: { trip: Trip }) {
   // The day is in the address (?day=2026-12-22) so a shared link or reload lands on it.
@@ -16,12 +18,16 @@ export function PlanView({ trip }: { trip: Trip }) {
   const today = todayIn(trip.timezone);
   const day =
     trip.days.find((d) => d.date === dayParam) ?? trip.days.find((d) => d.date === today) ?? trip.days[0];
-  const [openStopId, setOpenStopId] = useState<string>();
-  const [rainOpen, setRainOpen] = useState(false);
+  // One sheet at a time; switching its content (stop → edit form) keeps one history entry.
+  const [sheet, setSheet] = useState<SheetState>();
+  const close = () => setSheet(undefined);
 
   const stops = day?.stops ?? [];
-  const openStop = stops.find((s) => s.id === openStopId);
+  const allStops = trip.days.flatMap((d) => d.stops);
+  const openStop = sheet?.kind === "stop" ? allStops.find((s) => s.id === sheet.stopId) : undefined;
+  const editing = sheet?.kind === "form" ? allStops.find((s) => s.id === sheet.stopId) : undefined;
   const bookings = new Map(trip.bookings.map((b) => [b.id, b]));
+  const dayNotes = (trip.notes ?? []).filter((n) => n.dayId === day?.id);
 
   const selectDay = (d: Day) => setDayParam(d.date);
 
@@ -37,10 +43,14 @@ export function PlanView({ trip }: { trip: Trip }) {
           {dateRange(trip.startDate, trip.endDate)} · {trip.people.join(", ")}
         </div>
 
-        {trip.days.length > 0 && (
+      </div>
+
+      {trip.days.length > 0 && (
+        // Day tabs stay pinned while the timeline scrolls under them.
+        <div className="sticky top-0 z-10 bg-bg px-5 pt-[max(8px,env(safe-area-inset-top))] pb-2">
           <div
-            className="mt-4 grid gap-1 rounded-[14px] bg-soft p-1"
-            style={{ gridTemplateColumns: `repeat(${trip.days.length}, minmax(0, 1fr))` }}
+            className="mt-2 grid gap-1 overflow-x-auto rounded-[14px] bg-soft p-1"
+            style={{ gridTemplateColumns: `repeat(${trip.days.length}, minmax(52px, 1fr))` }}
             role="tablist"
           >
             {trip.days.map((d) => {
@@ -59,47 +69,82 @@ export function PlanView({ trip }: { trip: Trip }) {
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {day && (
-        <main className="flex-1 px-5 pt-5 pb-6">
+        <main className="flex-1 px-5 pt-3 pb-6">
           <div className="flex items-baseline justify-between gap-4 px-0.5">
             <h2 className="text-[17px] leading-snug font-semibold">{day.title || dayTab(day.date)}</h2>
-            <div className="flex shrink-0 gap-3.5 text-[13px] text-ink-2">
+            <div className="flex shrink-0 gap-1 text-[13px] text-ink-2">
               {dayRouteUrl(day) && (
-                <a href={dayRouteUrl(day)} target="_blank" rel="noreferrer">
+                <a href={dayRouteUrl(day)} target="_blank" rel="noreferrer" className="px-1.5 py-2.5">
                   Map
                 </a>
               )}
-              {day.rain.length > 0 && <button onClick={() => setRainOpen(true)}>If it rains</button>}
+              {day.rain.length > 0 && (
+                <button onClick={() => setSheet({ kind: "rain" })} className="px-1.5 py-2.5">
+                  If it rains
+                </button>
+              )}
+              <a href={askClaudeUrl(trip, day)} target="_blank" rel="noreferrer" className="px-1.5 py-2.5">
+                Ask Claude
+              </a>
             </div>
           </div>
 
-          <Timeline stops={stops} bookings={bookings} onOpen={setOpenStopId} />
+          <Timeline stops={stops} bookings={bookings} onOpen={(id) => setSheet({ kind: "stop", stopId: id })} />
+          <button onClick={() => setSheet({ kind: "form" })} className="press mt-2 w-full px-1 py-2.5 text-left text-sm text-ink-2">
+            + Add stop
+          </button>
+          {dayNotes.length > 0 && (
+            <ul className="mt-2 divide-y divide-divider rounded-[18px] border border-line bg-card px-3.5">
+              {dayNotes.map((n) => <NoteItem key={n.id} note={n} trip={trip} showWhere={false} />)}
+            </ul>
+          )}
           <SpareIdeas trip={trip} day={day} />
         </main>
       )}
 
-      <Sheet open={!!openStop} onClose={() => setOpenStopId(undefined)} label={openStop?.name ?? ""}>
+      <Sheet open={!!sheet} onClose={close} label={openStop?.name ?? (sheet?.kind === "rain" ? "If it rains" : "Stop")}>
         {openStop && (
           <StopDetail
+            trip={trip}
             stop={openStop}
             booking={openStop.bookingId ? bookings.get(openStop.bookingId) : undefined}
             onShift={(time) => editStop(trip.id, openStop.id, { time })}
             onPick={(pickedOptionId) => editStop(trip.id, openStop.id, { pickedOptionId })}
+            onEdit={() => setSheet({ kind: "form", stopId: openStop.id })}
           />
         )}
-      </Sheet>
-
-      <Sheet open={rainOpen} onClose={() => setRainOpen(false)} label="If it rains">
-        <h3 className="text-xl font-bold tracking-[-0.02em]">If it rains</h3>
-        <ul className="mt-3 flex flex-col gap-3 text-[15px] leading-relaxed text-ink-2">
-          {day?.rain.map((r) => <li key={r}>{r}</li>)}
-        </ul>
+        {sheet?.kind === "form" && day && (
+          <StopForm
+            key={sheet.stopId ?? "new"}
+            trip={trip}
+            day={trip.days.find((d) => d.stops.some((s) => s.id === sheet.stopId)) ?? day}
+            stop={editing}
+            onDone={() => window.history.back()}
+          />
+        )}
+        {sheet?.kind === "rain" && (
+          <>
+            <h3 className="text-xl font-bold tracking-[-0.02em]">If it rains</h3>
+            <ul className="mt-3 flex flex-col gap-3 text-[15px] leading-relaxed text-ink-2">
+              {day?.rain.map((r) => <li key={r}>{r}</li>)}
+            </ul>
+          </>
+        )}
       </Sheet>
     </>
   );
+}
+
+type SheetState = { kind: "stop"; stopId: string } | { kind: "form"; stopId?: string } | { kind: "rain" };
+
+/** Opens claude.ai with the trip and day already in the message. */
+function askClaudeUrl(trip: Trip, day: Day) {
+  const q = `In spor, look at ${trip.name} on ${dayTab(day.date)} (${day.date}${day.title ? `, "${day.title}"` : ""}). `;
+  return `https://claude.ai/new?q=${encodeURIComponent(q)}`;
 }
 
 // "London → Edinburgh → Glasgow" fits a tab as "Glasgow".

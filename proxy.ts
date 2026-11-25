@@ -4,7 +4,8 @@ import { hasSupabase, SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 
 // Everything is private: no session, no app. Also refreshes the session cookie on each visit.
 // The connector endpoints check Claude's bearer token themselves, so they skip the cookie gate.
-const PUBLIC = ["/login", "/auth/", "/api/mcp", "/.well-known/"];
+// The install files (manifest, icons, service worker) hold no data and must load before sign-in.
+const PUBLIC = ["/login", "/auth/", "/api/mcp", "/.well-known/", "/manifest.webmanifest", "/icon", "/apple-icon", "/sw.js"];
 
 export async function proxy(request: NextRequest) {
   if (!hasSupabase) {
@@ -27,7 +28,7 @@ export async function proxy(request: NextRequest) {
 
   const { data } = await sb.auth.getClaims();
   const path = request.nextUrl.pathname;
-  if (!data?.claims && !PUBLIC.some((p) => path.startsWith(p))) {
+  if (!data?.claims && !PUBLIC.some((p) => path === p || (p.endsWith("/") && path.startsWith(p)))) {
     if (path.startsWith("/api/")) return new NextResponse("Unauthorized", { status: 401 });
     const login = new URL("/login", request.url);
     if (path !== "/") login.searchParams.set("next", path + request.nextUrl.search);

@@ -44,8 +44,11 @@ export function daysUntil(iso: string, timeZone: string, now = new Date()): numb
 
 const SYMBOL: Record<Trip["currency"], string> = { EUR: "€", GBP: "£", DKK: "kr ", USD: "$" };
 
-export const money = (n: number, cur: Trip["currency"]) =>
-  `${SYMBOL[cur]}${Math.round(n).toLocaleString("en-GB")}`;
+/** "€1,450" for round amounts, "€12.50" when there are cents. */
+export const money = (n: number, cur: Trip["currency"]) => {
+  const cents = Math.round(n * 100) % 100 !== 0;
+  return `${SYMBOL[cur]}${n.toLocaleString("en-GB", { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 })}`;
+};
 
 export const toMin = (t: string) => {
   const [h, m] = t.split(":").map(Number);

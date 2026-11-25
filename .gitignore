@@ -43,3 +43,6 @@ next-env.d.ts
 # private trip data (booking notes, phone numbers)
 /data/seed/
 .env*.local
+
+# packaged skill for claude.ai upload (built from skills/*/)
+/skills/*.zip

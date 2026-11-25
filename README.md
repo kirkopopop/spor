@@ -38,7 +38,15 @@ Supabase Auth is the OAuth server; tools run as the signed-in person, so RLS app
 3. claude.ai → Settings → Connectors → Add custom connector → `https://spor-pi.vercel.app/api/mcp`.
 
 Tools: `list_trips`, `get_trip`, `get_activity_since`, `create_trip`, `update_trip`, `upsert_days`,
-`upsert_stops`, `delete_stops`, `upsert_bookings`, `set_budget`, `upsert_spare_ideas`.
+`upsert_stops`, `delete_stops`, `upsert_bookings`, `set_budget`, `upsert_spare_ideas`, `add_note`.
+Every write passes the `expected_revision` it last read; if anyone changed the trip since, the write is
+refused and Claude re-reads first. The skill Claude follows is in `skills/spor-planning/`
+(zip it as `spor-planning/SKILL.md` to upload to claude.ai).
+
+## Live view
+
+During the trip the first tab is Today (Now/Next, ticks, expenses, notes). Preview any moment with
+`?now=2026-12-22T13:10` on a trip page.
 
 ## Importing a UkTrip-format trip
 

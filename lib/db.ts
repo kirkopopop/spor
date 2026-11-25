@@ -1,4 +1,4 @@
-import type { Booking, Day, SpareIdea, Stop, Trip } from "./types";
+import type { Booking, Day, Expense, Note, SpareIdea, Stop, Trip } from "./types";
 import { dayMinute } from "./ops";
 
 // Row shapes as Supabase returns them (snake_case, nulls, numerics as strings).
@@ -25,14 +25,24 @@ export type SpareRow = {
   id: string; trip_id: string; name: string; city: string; area: string | null; note: string | null;
   indoor: boolean; minutes: number; lat: number | null; lng: number | null; maps_query: string | null;
 };
+export type NoteRow = {
+  id: string; trip_id: string; stop_id: string | null; day_id: string | null; author: string | null;
+  body: string; created_at: string; via?: "claude" | null;
+};
+export type ExpenseRow = {
+  id: string; trip_id: string; amount: Num; currency: Trip["currency"]; category: string; paid_by: string | null;
+  stop_id: string | null; note: string | null; spent_at: string;
+};
 export type TripRow = {
   id: string; household_id: string; name: string; stage: Trip["stage"]; start_date: string | null;
   end_date: string | null; timezone: string; currency: Trip["currency"]; people: string[]; summary: string | null;
+  revision?: number;
   days: DayRow[]; stops: StopRow[]; bookings: BookingRow[]; budget_lines: BudgetRow[]; spare_ideas: SpareRow[];
+  notes?: NoteRow[]; expenses?: ExpenseRow[];
 };
 
 /** PostgREST select that returns one TripRow per trip. */
-export const TRIP_SELECT = "*, days(*), stops(*), bookings(*), budget_lines(*), spare_ideas(*)";
+export const TRIP_SELECT = "*, days(*), stops(*), bookings(*), budget_lines(*), spare_ideas(*), notes(*), expenses(*)";
 
 const opt = <T>(v: T | null | undefined) => (v == null ? undefined : v);
 // Drops undefined only; optional flags opt out with `|| undefined` at the call site.
@@ -87,6 +97,7 @@ export function rowsToTrip(r: TripRow): Trip {
 
   return clean({
     id: r.id,
+    revision: r.revision,
     name: r.name,
     stage: r.stage,
     startDate: r.start_date ?? "",
@@ -105,6 +116,24 @@ export function rowsToTrip(r: TripRow): Trip {
         clean({
           id: s.id, name: s.name, city: s.city, area: opt(s.area), note: opt(s.note), indoor: s.indoor,
           minutes: s.minutes, lat: opt(s.lat), lng: opt(s.lng), mapsQuery: opt(s.maps_query),
+        }),
+    ),
+    notes: r.notes
+      ? [...r.notes]
+          .sort((a, b) => b.created_at.localeCompare(a.created_at))
+          .map(
+            (n): Note =>
+              clean({
+                id: n.id, body: n.body, authorId: opt(n.author), via: opt(n.via), stopId: opt(n.stop_id),
+                dayId: opt(n.day_id), createdAt: n.created_at,
+              }),
+          )
+      : undefined,
+    expenses: r.expenses?.map(
+      (e): Expense =>
+        clean({
+          id: e.id, amount: Number(e.amount), currency: e.currency, category: e.category, paidBy: opt(e.paid_by),
+          stopId: opt(e.stop_id), note: opt(e.note), spentAt: e.spent_at,
         }),
     ),
   });

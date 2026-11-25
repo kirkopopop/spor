@@ -1,22 +1,29 @@
 "use client";
 
-import type { Booking, Stop } from "@/lib/types";
+import type { Booking, Stop, Trip } from "@/lib/types";
+import { NoteForm } from "./Forms";
+import { NoteItem } from "./TripTabs";
 import { leaveBy, mapsSearch, MODE_LABEL, shiftTime, showTime, travelMinutes } from "@/lib/format";
 import { Check, Directions, Mode } from "./icons";
 import { RichText } from "./RichText";
 
 /** The sheet answers "how and what if"; the list already said "what and when". */
 export function StopDetail({
+  trip,
   stop,
   booking,
   onShift,
   onPick,
+  onEdit,
 }: {
+  trip: Trip;
   stop: Stop;
   booking?: Booking;
   onShift: (time: string) => void;
   onPick: (optionId: string) => void;
+  onEdit: () => void;
 }) {
+  const notes = (trip.notes ?? []).filter((n) => n.stopId === stop.id);
   const leave = leaveBy(stop);
   const maps = stop.mapsQuery
     ? mapsSearch(stop.mapsQuery)
@@ -115,6 +122,15 @@ export function StopDetail({
         </section>
       )}
 
+      <section className="mt-4">
+        {notes.length > 0 && (
+          <ul className="mb-2 divide-y divide-divider rounded-2xl border border-line px-3.5">
+            {notes.map((n) => <NoteItem key={n.id} note={n} trip={trip} showWhere={false} />)}
+          </ul>
+        )}
+        <NoteForm tripId={trip.id} stopId={stop.id} compact />
+      </section>
+
       <div className="mt-5 flex gap-2">
         {maps && (
           <a
@@ -140,6 +156,9 @@ export function StopDetail({
           Later
         </button>
       </div>
+      <button onClick={onEdit} className="press mt-2 h-11 w-full rounded-[14px] text-sm text-ink-2">
+        Edit stop
+      </button>
     </article>
   );
 }

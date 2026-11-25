@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysUntil, leaveBy, LEAVE_SLACK_MIN, shiftTime, todayIn } from "./format";
+import { daysUntil, leaveBy, LEAVE_SLACK_MIN, money, shiftTime, todayIn } from "./format";
 import type { Stop } from "./types";
 
 const stop = (p: Partial<Stop>): Stop => ({ id: "s", time: "19:30", name: "x", kind: "normal", ...p });
@@ -25,6 +25,14 @@ describe("leaveBy", () => {
 
   it("wraps past midnight", () => {
     expect(leaveBy(stop({ time: "00:10", kind: "fixed", go: { mode: "taxi", min: 20 } }))).toBe("23:35");
+  });
+});
+
+describe("money", () => {
+  it("keeps cents only when there are some", () => {
+    expect(money(1450, "EUR")).toBe("€1,450");
+    expect(money(12.5, "GBP")).toBe("£12.50");
+    expect(money(0, "EUR")).toBe("€0");
   });
 });
 

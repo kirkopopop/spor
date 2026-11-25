@@ -54,14 +54,22 @@ const fail = (errors: string[]) => ({
 export function buildServer(sb: SupabaseClient, userId: string) {
   const server = new McpServer({ name: "spor", version: "1.0.0" });
 
-  async function context(tripId: string): Promise<TripContext | string> {
+  /**
+   * Loads what the checks need and refuses a stale write: if anything in the trip
+   * changed since Claude read it (a pick, a tick, Tanya's Claude), the revision moved.
+   */
+  async function context(tripId: string, expectedRevision: number): Promise<TripContext | string> {
     const { data: trip, error } = await sb
       .from("trips")
-      .select("id, start_date, end_date, days(id, date), bookings(id), stops(id)")
+      .select("id, revision, start_date, end_date, days(id, date), bookings(id), stops(id)")
       .eq("id", tripId)
       .maybeSingle();
     if (error) return error.message;
     if (!trip) return `trip ${tripId} not found (use list_trips)`;
+    if (trip.revision !== expectedRevision) {
+      const recent = (await activity(tripId)).slice(0, 8).map((a) => `${a.who}: ${a.kind}`);
+      return `the trip changed since you read it (revision ${expectedRevision} → ${trip.revision}; latest: ${recent.join("; ") || "—"}). Call get_trip again, keep those changes, and retry with the new revision.`;
+    }
     return {
       tripId,
       startDate: trip.start_date,
@@ -71,6 +79,13 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       stopIds: new Set(trip.stops.map((s: { id: string }) => s.id)),
     };
   }
+
+  async function revisionOf(tripId: string) {
+    const { data } = await sb.from("trips").select("revision").eq("id", tripId).single();
+    return data?.revision as number | undefined;
+  }
+
+  const REVISION = z.number().int().describe("trip.revision from your latest get_trip; a stale one is refused");
 
   async function log(tripId: string, kind: string, patch: unknown, targetId?: string) {
     await sb.from("activity_log").insert({ trip_id: tripId, actor: userId, kind, target_id: targetId ?? null, patch });
@@ -106,7 +121,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
     {
       title: "Get trip",
       description:
-        "The full current trip: days, stops (with ids), bookings, budget, spare ideas, plus recent activity — the travellers' own picks, ticks, time changes and expenses. Always call this before changing a trip, so you never overwrite their edits from a stale copy.",
+        "The full current trip: its revision, days, stops (with ids), bookings, budget, spare ideas, expenses, the travellers' notes (requests to you are often here) and recent activity — their picks, ticks, moved times and added stops. Always call this before changing a trip and pass its revision as expected_revision; if a write says the trip changed, call this again.",
       inputSchema: { trip_id: z.string().uuid() },
       annotations: { readOnlyHint: true },
     },
@@ -114,7 +129,24 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       const { data, error } = await sb.from("trips").select(TRIP_SELECT).eq("id", trip_id).maybeSingle();
       if (error) return fail([error.message]);
       if (!data) return fail([`trip ${trip_id} not found (use list_trips)`]);
-      return ok({ trip: rowsToTrip(data as TripRow), recent_activity: await activity(trip_id) });
+      const trip = rowsToTrip(data as TripRow);
+      const { data: members } = await sb.from("household_members").select("user_id, display_name");
+      const names = new Map((members ?? []).map((m) => [m.user_id, m.display_name]));
+      const stopName = new Map(trip.days.flatMap((d) => d.stops.map((s) => [s.id, `${d.date} ${s.time} ${s.name}`] as const)));
+      const dayDate = new Map(trip.days.map((d) => [d.id, d.date]));
+      const { notes = [], ...rest } = trip;
+      return ok({
+        revision: trip.revision,
+        trip: rest,
+        notes: notes.map((n) => ({
+          id: n.id,
+          by: n.via === "claude" ? `Claude (for ${(n.authorId && names.get(n.authorId)) || "someone"})` : (n.authorId && names.get(n.authorId)) || "someone",
+          at: n.createdAt,
+          on: n.stopId ? `stop ${stopName.get(n.stopId) ?? n.stopId}` : n.dayId ? `day ${dayDate.get(n.dayId)}` : "trip",
+          body: n.body,
+        })),
+        recent_activity: await activity(trip_id),
+      });
     },
   );
 
@@ -153,7 +185,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       if (error) return fail([error.message]);
       await addMissingDays(trip.id, input.start_date, input.end_date);
       await log(trip.id, "claude.create_trip", { name: input.name });
-      return ok({ trip_id: trip.id });
+      return ok({ trip_id: trip.id, revision: await revisionOf(trip.id) });
     },
   );
 
@@ -164,6 +196,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       description: "Change a trip's name, stage, dates, timezone, currency, people or summary. Extending dates adds days; shrinking is refused if a removed day has stops.",
       inputSchema: {
         trip_id: z.string().uuid(),
+        expected_revision: REVISION,
         name: z.string().min(1).max(120).optional(),
         stage: z.enum(["idea", "planning", "live", "memory"]).optional(),
         start_date: DATE.optional(),
@@ -174,8 +207,8 @@ export function buildServer(sb: SupabaseClient, userId: string) {
         summary: z.string().optional(),
       },
     },
-    async ({ trip_id, ...patch }) => {
-      const ctx = await context(trip_id);
+    async ({ trip_id, expected_revision, ...patch }) => {
+      const ctx = await context(trip_id, expected_revision);
       if (typeof ctx === "string") return fail([ctx]);
       const start = patch.start_date ?? ctx.startDate;
       const end = patch.end_date ?? ctx.endDate;
@@ -192,7 +225,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       if (dropped.length) await sb.from("days").delete().in("id", dropped);
       await addMissingDays(trip_id, start, end);
       await log(trip_id, "claude.update_trip", patch);
-      return ok({ updated: Object.keys(patch) });
+      return ok({ updated: Object.keys(patch), revision: await revisionOf(trip_id) });
     },
   );
 
@@ -203,6 +236,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       description: `Set day titles (max 40 characters; detail goes in intro), city (matches spare ideas), place (shown under the date), intro and the rain plan (1–3 short sentences: what to swap if wet). Every day should have a rain plan.`,
       inputSchema: {
         trip_id: z.string().uuid(),
+        expected_revision: REVISION,
         days: z.array(
           z.object({
             date: DATE,
@@ -215,15 +249,15 @@ export function buildServer(sb: SupabaseClient, userId: string) {
         ),
       },
     },
-    async ({ trip_id, days }) => {
-      const ctx = await context(trip_id);
+    async ({ trip_id, expected_revision, days }) => {
+      const ctx = await context(trip_id, expected_revision);
       if (typeof ctx === "string") return fail([ctx]);
       const { rows, errors } = validateDays(days, ctx);
       if (errors.length) return fail(errors);
       const { error } = await sb.from("days").upsert(rows, { onConflict: "trip_id,date" });
       if (error) return fail([error.message]);
       await log(trip_id, "claude.upsert_days", { dates: days.map((d) => d.date) });
-      return ok({ saved: rows.length });
+      return ok({ saved: rows.length, revision: await revisionOf(trip_id) });
     },
   );
 
@@ -233,17 +267,17 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       title: "Add or update stops",
       description:
         "Create or update stops in one batch (all or nothing). Pass id to update an existing stop (ids come from get_trip). Rules that make a plan work on the day: every stop has a time; mark fixed what cannot move; at least two optional stops per day; every hop over 5 minutes gets travel (go) with real journey times; the first stop's go is the trip from where you slept; ≥15 min slack before fixed times; every booked thing links its booking_id.",
-      inputSchema: { trip_id: z.string().uuid(), stops: z.array(stopInput).min(1) },
+      inputSchema: { trip_id: z.string().uuid(), expected_revision: REVISION, stops: z.array(stopInput).min(1) },
     },
-    async ({ trip_id, stops }) => {
-      const ctx = await context(trip_id);
+    async ({ trip_id, expected_revision, stops }) => {
+      const ctx = await context(trip_id, expected_revision);
       if (typeof ctx === "string") return fail([ctx]);
       const { rows, errors } = validateStops(stops, ctx);
       if (errors.length) return fail(errors);
       const { error } = await sb.from("stops").upsert(rows);
       if (error) return fail([error.message]);
       await log(trip_id, "claude.upsert_stops", { stops: rows.map((r) => ({ id: r.id, name: r.name, time: r.time })) });
-      return ok({ saved: rows.map((r) => ({ id: r.id, name: r.name })) });
+      return ok({ saved: rows.map((r) => ({ id: r.id, name: r.name })), revision: await revisionOf(trip_id) });
     },
   );
 
@@ -252,14 +286,16 @@ export function buildServer(sb: SupabaseClient, userId: string) {
     {
       title: "Delete stops",
       description: "Delete stops by id. Check recent activity first: a traveller may have ticked or picked one.",
-      inputSchema: { trip_id: z.string().uuid(), stop_ids: z.array(z.string().uuid()).min(1) },
+      inputSchema: { trip_id: z.string().uuid(), expected_revision: REVISION, stop_ids: z.array(z.string().uuid()).min(1) },
       annotations: { destructiveHint: true },
     },
-    async ({ trip_id, stop_ids }) => {
+    async ({ trip_id, expected_revision, stop_ids }) => {
+      const ctx = await context(trip_id, expected_revision);
+      if (typeof ctx === "string") return fail([ctx]);
       const { data, error } = await sb.from("stops").delete().eq("trip_id", trip_id).in("id", stop_ids).select("id, name");
       if (error) return fail([error.message]);
       await log(trip_id, "claude.delete_stops", { stops: data });
-      return ok({ deleted: data?.length ?? 0 });
+      return ok({ deleted: data?.length ?? 0, revision: await revisionOf(trip_id) });
     },
   );
 
@@ -270,6 +306,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       description: "The to-book checklist. Pass id to update. status 'booked' only once it really is booked. private_ref holds booking references; it stays in the private database.",
       inputSchema: {
         trip_id: z.string().uuid(),
+        expected_revision: REVISION,
         bookings: z.array(
           z.object({
             id: z.string().uuid().optional(),
@@ -286,8 +323,8 @@ export function buildServer(sb: SupabaseClient, userId: string) {
         ),
       },
     },
-    async ({ trip_id, bookings }) => {
-      const ctx = await context(trip_id);
+    async ({ trip_id, expected_revision, bookings }) => {
+      const ctx = await context(trip_id, expected_revision);
       if (typeof ctx === "string") return fail([ctx]);
       const strangers = bookings.filter((b) => b.id && !ctx.bookingIds.has(b.id)).map((b) => `"${b.title}": booking ${b.id} is not in this trip; omit id to create`);
       if (strangers.length) return fail(strangers);
@@ -295,7 +332,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       const { error } = await sb.from("bookings").upsert(rows);
       if (error) return fail([error.message]);
       await log(trip_id, "claude.upsert_bookings", { bookings: rows.map((r) => ({ id: r.id, title: r.title, status: r.status })) });
-      return ok({ saved: rows.map((r) => ({ id: r.id, title: r.title })) });
+      return ok({ saved: rows.map((r) => ({ id: r.id, title: r.title })), revision: await revisionOf(trip_id) });
     },
   );
 
@@ -306,16 +343,19 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       description: "Replace the trip's planned budget: one line per category, total for the whole party. Should cover every hotel night and every booking.",
       inputSchema: {
         trip_id: z.string().uuid(),
+        expected_revision: REVISION,
         lines: z.array(z.object({ category: z.string().min(1), label: z.string().min(1), planned: z.number().nonnegative() })),
       },
     },
-    async ({ trip_id, lines }) => {
+    async ({ trip_id, expected_revision, lines }) => {
+      const ctx = await context(trip_id, expected_revision);
+      if (typeof ctx === "string") return fail([ctx]);
       const del = await sb.from("budget_lines").delete().eq("trip_id", trip_id);
       if (del.error) return fail([del.error.message]);
       const { error } = await sb.from("budget_lines").insert(lines.map((l) => ({ ...l, trip_id })));
       if (error) return fail([error.message]);
       await log(trip_id, "claude.set_budget", { lines });
-      return ok({ saved: lines.length });
+      return ok({ saved: lines.length, revision: await revisionOf(trip_id) });
     },
   );
 
@@ -326,6 +366,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       description: "Spare-time and rain ideas, tagged by city (must match the days' city), indoor or not, and minutes. Each city should have at least three indoor ideas.",
       inputSchema: {
         trip_id: z.string().uuid(),
+        expected_revision: REVISION,
         ideas: z.array(
           z.object({
             id: z.string().uuid().optional(),
@@ -342,12 +383,40 @@ export function buildServer(sb: SupabaseClient, userId: string) {
         ),
       },
     },
-    async ({ trip_id, ideas }) => {
+    async ({ trip_id, expected_revision, ideas }) => {
+      const ctx = await context(trip_id, expected_revision);
+      if (typeof ctx === "string") return fail([ctx]);
       const rows = ideas.map((i) => ({ ...i, id: i.id ?? crypto.randomUUID(), trip_id }));
       const { error } = await sb.from("spare_ideas").upsert(rows);
       if (error) return fail([error.message]);
       await log(trip_id, "claude.upsert_spare_ideas", { names: ideas.map((i) => i.name) });
-      return ok({ saved: rows.length });
+      return ok({ saved: rows.length, revision: await revisionOf(trip_id) });
+    },
+  );
+
+  server.registerTool(
+    "add_note",
+    {
+      title: "Add a note",
+      description:
+        "Leave a short note on the trip, a day or a stop, shown to the travellers in spor. Use it to answer their notes (\"Moved the museum to Wednesday as you asked\") or flag something to decide. Keep it to one or two sentences.",
+      inputSchema: {
+        trip_id: z.string().uuid(),
+        expected_revision: REVISION,
+        body: z.string().min(1).max(1000),
+        stop_id: z.string().uuid().optional(),
+        date: DATE.optional().describe("Put the note on this day"),
+      },
+    },
+    async ({ trip_id, expected_revision, body, stop_id, date }) => {
+      const ctx = await context(trip_id, expected_revision);
+      if (typeof ctx === "string") return fail([ctx]);
+      if (stop_id && !ctx.stopIds.has(stop_id)) return fail([`stop ${stop_id} is not in this trip`]);
+      const dayId = date ? ctx.days.get(date) : undefined;
+      if (date && !dayId) return fail([`no day ${date} in this trip`]);
+      const { error } = await sb.from("notes").insert({ trip_id, body, stop_id: stop_id ?? null, day_id: dayId ?? null, via: "claude" });
+      if (error) return fail([error.message]);
+      return ok({ saved: true, revision: await revisionOf(trip_id) });
     },
   );
 
