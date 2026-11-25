@@ -3,7 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import { hasSupabase, SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 
 // Everything is private: no session, no app. Also refreshes the session cookie on each visit.
-const PUBLIC = ["/login", "/auth/"];
+// The connector endpoints check Claude's bearer token themselves, so they skip the cookie gate.
+const PUBLIC = ["/login", "/auth/", "/api/mcp", "/.well-known/"];
 
 export async function proxy(request: NextRequest) {
   if (!hasSupabase) {
@@ -28,7 +29,9 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   if (!data?.claims && !PUBLIC.some((p) => path.startsWith(p))) {
     if (path.startsWith("/api/")) return new NextResponse("Unauthorized", { status: 401 });
-    return NextResponse.redirect(new URL("/login", request.url));
+    const login = new URL("/login", request.url);
+    if (path !== "/") login.searchParams.set("next", path + request.nextUrl.search);
+    return NextResponse.redirect(login);
   }
   return response;
 }

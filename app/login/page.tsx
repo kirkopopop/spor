@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { safeNext } from "@/lib/safeNext";
 
 type Status = "idle" | "sending" | "sent" | "error";
 
@@ -12,9 +13,12 @@ export default function Login() {
   async function send(e: React.FormEvent) {
     e.preventDefault();
     setStatus("sending");
+    const next = safeNext(new URLSearchParams(window.location.search).get("next"));
+    const callback = new URL("/auth/callback", window.location.origin);
+    if (next !== "/") callback.searchParams.set("next", next);
     const { error } = await supabase().auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: callback.href },
     });
     setStatus(error ? "error" : "sent");
   }

@@ -26,6 +26,20 @@ Without Supabase settings the app runs in dev on the trips in `data/seed/*.json`
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable key>
    ```
 
+## Claude connector
+
+claude.ai writes plans into spor through the MCP endpoint `https://spor-pi.vercel.app/api/mcp`.
+Supabase Auth is the OAuth server; tools run as the signed-in person, so RLS applies.
+
+1. Supabase → Authentication → URL Configuration: Site URL `https://spor-pi.vercel.app`;
+   Redirect URLs `https://spor-pi.vercel.app/**` and `http://localhost:3000/**`.
+2. Supabase → Authentication → OAuth Server: enable it, Authorization Path `/oauth/consent`,
+   allow dynamic client registration.
+3. claude.ai → Settings → Connectors → Add custom connector → `https://spor-pi.vercel.app/api/mcp`.
+
+Tools: `list_trips`, `get_trip`, `get_activity_since`, `create_trip`, `update_trip`, `upsert_days`,
+`upsert_stops`, `delete_stops`, `upsert_bookings`, `set_budget`, `upsert_spare_ideas`.
+
 ## Importing a UkTrip-format trip
 
 ```bash
