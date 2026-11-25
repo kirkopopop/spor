@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/* Design tokens from the spor mockup (handover § Design tokens). */
+@theme {
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  --color-bg: #f6f5f2;
+  --color-card: #ffffff;
+  --color-ink: #16181d;
+  --color-ink-2: #3b3f47;
+  --color-muted: #6a6f78;
+  --color-line: #e6e3dc;
+  --color-divider: #f1f0ec;
+  --color-soft: #eceae4;
+  --color-faint: #c7c3ba;
+  --color-accent: #e2553a;
+  --color-accent-ink: #b23a22;
+  --color-accent-soft: #f3e7e2;
+  --color-ok: #2f7a4f;
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--color-bg);
+}
+
+button {
+  cursor: pointer;
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
