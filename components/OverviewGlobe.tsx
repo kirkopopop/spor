@@ -41,7 +41,7 @@ export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; t
   return (
     <section
       aria-label="Your trips on a globe"
-      className="relative h-[360px] overflow-hidden rounded-[22px] bg-[radial-gradient(circle_at_50%_46%,#f7f9fc,#dde5ee)] shadow-[var(--shadow-card)] min-[640px]:h-[440px] dark:bg-[radial-gradient(circle_at_50%_46%,#121a24,#04070b)]"
+      className="relative h-[360px] overflow-hidden rounded-[22px] min-[1024px]:h-full bg-[radial-gradient(circle_at_50%_46%,#f7f9fc,#dde5ee)] shadow-[var(--shadow-card)] min-[640px]:h-[440px] dark:bg-[radial-gradient(circle_at_50%_46%,#121a24,#04070b)]"
     >
       <Globe pins={pins} routes={routes} selectedId={selected?.id} onSelect={setSelectedId} focus={focusAt} className="absolute inset-0" />
 

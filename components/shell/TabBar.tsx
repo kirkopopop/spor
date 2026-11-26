@@ -11,13 +11,13 @@ const TABS = [
 ] as const;
 
 /** The app's three places. Hidden inside a trip, where the map and sheet take the screen. */
-export function TabBar() {
+export function TabBar({ split }: { split?: boolean }) {
   const path = usePathname();
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-line/80 bg-card/90 backdrop-blur-xl backdrop-saturate-150"
+      className={`fixed inset-x-0 bottom-0 z-30 border-t border-line/80 bg-card/90 backdrop-blur-xl backdrop-saturate-150 ${split ? "min-[1024px]:left-2/3" : ""}`}
     >
       <div className="mx-auto flex max-w-[640px] justify-around px-2 pt-1.5 pb-[max(10px,env(safe-area-inset-bottom))]">
         {TABS.map(({ href, label, Icon }) => {
@@ -41,16 +41,24 @@ export function TabBar() {
   );
 }
 
-/** A tab's page: large title, optional trailing action, content, room for the tab bar. */
-export function Screen({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+/**
+ * A tab's page: large title, optional trailing action, content, room for the tab bar.
+ * `aside` is a panel that leads the page on a phone and, from 1024px, takes the left two thirds
+ * of the screen, fixed, while the title and content scroll in the right third.
+ */
+export function Screen({ title, action, aside, children }: { title: string; action?: React.ReactNode; aside?: React.ReactNode; children: React.ReactNode }) {
+  const split = !!aside;
   return (
-    <div className="mx-auto flex min-h-dvh max-w-[640px] flex-col">
+    <div className={`mx-auto flex min-h-dvh max-w-[640px] flex-col ${split ? "min-[1024px]:mr-0 min-[1024px]:ml-[66.667%] min-[1024px]:max-w-none" : ""}`}>
       <header className="flex items-end justify-between gap-3 px-5 pt-[max(56px,calc(env(safe-area-inset-top)+20px))] pb-3">
         <h1 className="text-[34px] leading-tight font-bold tracking-[-0.025em]">{title}</h1>
         {action}
       </header>
+      {aside && (
+        <div className="px-4 pb-7 min-[1024px]:fixed min-[1024px]:inset-y-4 min-[1024px]:left-4 min-[1024px]:w-[calc(66.667%-24px)] min-[1024px]:p-0">{aside}</div>
+      )}
       <main className="flex flex-1 flex-col gap-7 px-4 pb-32 [animation:rise_320ms_cubic-bezier(.2,.8,.2,1)]">{children}</main>
-      <TabBar />
+      <TabBar split={split} />
     </div>
   );
 }

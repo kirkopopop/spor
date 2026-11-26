@@ -11,7 +11,7 @@ import type { Trip } from "@/lib/types";
 import { Group, Row, Screen } from "./shell/TabBar";
 import { OverviewGlobe } from "./OverviewGlobe";
 import { DestinationMark, DestinationPhoto, LandmarkIcon, TripTile } from "./Destination";
-import { destinationOf } from "@/lib/destination";
+import { destinationOf, tripPlace } from "@/lib/destination";
 import { ChatIcon } from "./icons";
 
 /** Overview: every trip at a glance, the next one first. */
@@ -30,10 +30,29 @@ export function HomeScreen() {
   const thisYear = groups.past.filter((t) => t.startDate.startsWith(year));
   const daysAway = thisYear.reduce((n, t) => n + t.days.length, 0);
   const cities = new Set(thisYear.flatMap((t) => t.days.map((d) => d.city).filter(Boolean))).size;
+  const onGlobe = trips.some((t) => tripPlace(t));
 
   return (
     <Screen
       title="Overview"
+      aside={
+        onGlobe && (
+          <OverviewGlobe
+            trips={trips}
+            today={today}
+            focus={next}
+            stats={
+              thisYear.length > 0 && (
+                <p className="rounded-full bg-card/88 px-3 py-1.5 text-[13px] text-ink-2 shadow-[var(--shadow-float)] backdrop-blur-md">
+                  {year}: <b className="font-semibold text-ink">{thisYear.length}</b> {thisYear.length === 1 ? "trip" : "trips"} ·{" "}
+                  <b className="font-semibold text-ink">{daysAway}</b> days away · <b className="font-semibold text-ink">{cities}</b>{" "}
+                  {cities === 1 ? "city" : "cities"}
+                </p>
+              )
+            }
+          />
+        )
+      }
       action={
         <Link
           href="/settings"
@@ -44,20 +63,6 @@ export function HomeScreen() {
         </Link>
       }
     >
-      <OverviewGlobe
-        trips={trips}
-        today={today}
-        focus={next}
-        stats={
-          thisYear.length > 0 && (
-            <p className="rounded-full bg-card/88 px-3 py-1.5 text-[13px] text-ink-2 shadow-[var(--shadow-float)] backdrop-blur-md">
-              {year}: <b className="font-semibold text-ink">{thisYear.length}</b> {thisYear.length === 1 ? "trip" : "trips"} ·{" "}
-              <b className="font-semibold text-ink">{daysAway}</b> days away · <b className="font-semibold text-ink">{cities}</b>{" "}
-              {cities === 1 ? "city" : "cities"}
-            </p>
-          )
-        }
-      />
 
       {next ? <NextTrip trip={next} live={groups.now.includes(next)} myName={myName} /> : <EmptyNext />}
 
