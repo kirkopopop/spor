@@ -45,6 +45,7 @@ Planning happens in Claude, not in the app: tur is where the plan lives. Each tr
 ## Brand Commitments
 
 - Name: **tur** (Danish for trip; renamed from spor in Nov 2026), always lowercase; sits in a family of the user's apps (hjem, skarb, puls, ravn, kolo).
+- Mark: a white suitcase (rolling case with two straps) on the accent blue; app icon, favicon and sign-in all use `app/turMark.tsx`.
 - Voice: plain, short, calm. No instruction copy on screen; empty states are two or three words ("None yet.", "All booked."). Don't say anything twice.
 - Status by styling, not words. The only status words: "To book", "Pick one" (or the picked option's name).
 - The list answers "what and when"; the detail sheet answers "how and what if". The plan sits high on the first screen.

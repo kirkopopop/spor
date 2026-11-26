@@ -1,13 +1,24 @@
-// The home-screen mark: a route with two stops, the blue of the app's routes.
+// tur's mark: a white suitcase on the app's blue.
+
+/** The suitcase alone. `accent` paints the straps (the tile colour, so they read as cut-outs; "currentColor" works in the app). */
+export function Suitcase({ size, accent }: { size: number; accent: string }) {
+  return (
+    <svg width={size} height={size} viewBox="14 18 72 72" aria-hidden="true">
+      <path d="M40 36 V29 Q40 25 44 25 H56 Q60 25 60 29 V36" fill="none" stroke="#FFFFFF" strokeWidth="5" />
+      <rect x="25" y="36" width="50" height="40" rx="8" fill="#FFFFFF" />
+      <line x1="38" y1="42" x2="38" y2="70" stroke={accent} strokeWidth="4" strokeLinecap="round" />
+      <line x1="62" y1="42" x2="62" y2="70" stroke={accent} strokeWidth="4" strokeLinecap="round" />
+      <circle cx="35" cy="81" r="3.5" fill="#FFFFFF" />
+      <circle cx="65" cy="81" r="3.5" fill="#FFFFFF" />
+    </svg>
+  );
+}
+
+/** The home-screen icon: full-bleed blue square (the OS rounds the corners). */
 export function TurMark({ size }: { size: number }) {
-  const s = size / 100;
   return (
     <div style={{ width: size, height: size, background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <svg width={66 * s} height={66 * s} viewBox="0 0 70 70">
-        <path d="M14 56 C 14 34, 56 40, 56 14" fill="none" stroke="#FFFFFF" strokeWidth="7" strokeLinecap="round" />
-        <circle cx="14" cy="56" r="8.5" fill="#FFFFFF" />
-        <circle cx="56" cy="14" r="8" fill="#2563EB" stroke="#FFFFFF" strokeWidth="5" />
-      </svg>
+      <Suitcase size={size * 0.8} accent="#2563EB" />
     </div>
   );
 }

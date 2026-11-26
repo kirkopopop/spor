@@ -7,6 +7,7 @@ import { safeNext } from "@/lib/safeNext";
 import journey from "@/assets/photos/journey.jpg";
 import london from "@/assets/photos/london.jpg";
 import { LandmarkIcon } from "@/components/Destination";
+import { Suitcase } from "../turMark";
 
 const common = { alt: "", fill: true, loading: "eager", fetchPriority: "high" } as const;
 const {
@@ -16,15 +17,11 @@ const { props: tall } = getImageProps({ ...common, src: london, sizes: "100vw", 
 
 type Status = "idle" | "sending" | "sent" | "error";
 
-/** The route-with-two-stops mark from the app icon, drawn to sit on a photo. */
+/** The suitcase from the app icon, drawn to sit on a photo. */
 function Mark({ size = 30 }: { size?: number }) {
   return (
-    <span className="flex items-center justify-center rounded-[9px] bg-accent" style={{ width: size, height: size }}>
-      <svg width={size * 0.66} height={size * 0.66} viewBox="0 0 70 70" aria-hidden="true">
-        <path d="M14 56 C 14 34, 56 40, 56 14" fill="none" stroke="#fff" strokeWidth="7" strokeLinecap="round" />
-        <circle cx="14" cy="56" r="8.5" fill="#fff" />
-        <circle cx="56" cy="14" r="8" className="fill-accent" stroke="#fff" strokeWidth="5" />
-      </svg>
+    <span className="flex items-center justify-center rounded-[9px] bg-accent text-accent" style={{ width: size, height: size }}>
+      <Suitcase size={size * 0.8} accent="currentColor" />
     </span>
   );
 }
