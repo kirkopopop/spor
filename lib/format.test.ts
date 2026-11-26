@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysUntil, leaveBy, LEAVE_SLACK_MIN, money, shiftTime, todayIn } from "./format";
+import { clockTime, daysUntil, leaveBy, LEAVE_SLACK_MIN, money, setClockFormat, shiftTime, todayIn } from "./format";
 import type { Stop } from "./types";
 
 const stop = (p: Partial<Stop>): Stop => ({ id: "s", time: "19:30", name: "x", kind: "normal", ...p });
@@ -33,6 +33,17 @@ describe("money", () => {
     expect(money(1450, "EUR")).toBe("€1,450");
     expect(money(12.5, "GBP")).toBe("£12.50");
     expect(money(0, "EUR")).toBe("€0");
+  });
+});
+
+describe("clockTime", () => {
+  it("follows the 12-hour preference and leaves stored times alone", () => {
+    setClockFormat("12h");
+    expect(clockTime("00:30")).toBe("12:30 am");
+    expect(clockTime("12:05")).toBe("12:05 pm");
+    expect(clockTime("18:30")).toBe("6:30 pm");
+    setClockFormat("24h");
+    expect(clockTime("18:30")).toBe("18:30");
   });
 });
 

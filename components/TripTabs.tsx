@@ -26,20 +26,20 @@ function TabHeader({ trip, onBack }: { trip: Trip; onBack: () => void }) {
 }
 
 const Empty = ({ children }: { children: string }) => (
-  <div className="rounded-[18px] border border-line bg-card px-3.5 py-4 text-sm text-muted">{children}</div>
+  <div className="rounded-2xl bg-bg px-3.5 py-4 text-sm text-muted">{children}</div>
 );
 
-export function BookTab({ trip, onBack }: { trip: Trip; onBack: () => void }) {
+export function BookTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) {
   const toBook = trip.bookings.filter((b) => b.status === "to_book");
   const booked = trip.bookings.filter((b) => b.status === "booked");
   return (
     <>
-      <TabHeader trip={trip} onBack={onBack} />
-      <main className="flex flex-1 flex-col gap-5 px-5 pt-5 pb-6">
+      {onBack && <TabHeader trip={trip} onBack={onBack} />}
+      <main className="flex flex-col gap-5 px-5 pt-1 pb-8">
         <section>
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="text-[15px] font-semibold">To book</h2>
-            {toBook.length > 0 && <span className="text-[13px] font-semibold text-accent-ink">{toBook.length} left</span>}
+            {toBook.length > 0 && <span className="text-[13px] font-semibold text-fixed">{toBook.length} left</span>}
           </div>
           {toBook.length === 0 ? (
             <Empty>{trip.bookings.length === 0 ? "None yet." : "All booked."}</Empty>
@@ -59,7 +59,7 @@ export function BookTab({ trip, onBack }: { trip: Trip; onBack: () => void }) {
 
 function BookingList({ bookings, trip }: { bookings: Booking[]; trip: Trip }) {
   return (
-    <ul className="divide-y divide-divider rounded-[18px] border border-line bg-card px-3.5">
+    <ul className="divide-y divide-divider rounded-2xl bg-bg px-3.5">
       {bookings.map((b) => (
         <li key={b.id} className="flex items-center gap-3 py-3">
           {b.status === "booked" ? (
@@ -99,7 +99,7 @@ export function MoneyTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) 
   return (
     <>
       {onBack && <TabHeader trip={trip} onBack={onBack} />}
-      <main className="flex flex-1 flex-col gap-5 px-5 pt-5 pb-6">
+      <main className="flex flex-col gap-5 px-5 pt-1 pb-8">
         <section>
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="text-[15px] font-semibold">Money</h2>
@@ -116,7 +116,7 @@ export function MoneyTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) 
           {lines.length === 0 && expenses.length === 0 ? (
             <Empty>None yet.</Empty>
           ) : (
-            <div className="rounded-[18px] border border-line bg-card px-3.5 py-4">
+            <div className="rounded-2xl bg-bg px-3.5 py-4">
               <div className="flex items-baseline gap-1.5">
                 <span className="text-[26px] font-bold tracking-[-0.02em]">{money(spent, trip.currency)}</span>
                 {planned > 0 && <span className="text-sm text-muted">of {money(planned, trip.currency)} planned</span>}
@@ -141,13 +141,13 @@ export function MoneyTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) 
           )}
         </section>
 
-        <button onClick={() => setAdding(true)} className="press h-12 rounded-[14px] border border-line bg-card text-[15px] font-semibold">
+        <button onClick={() => setAdding(true)} className="press h-12 rounded-xl bg-accent text-[16px] font-semibold text-white">
           Add expense
         </button>
 
         {expenses.length > 0 && (
           <Fold label={`${expenses.length} expenses`}>
-            <ul className="divide-y divide-divider rounded-[18px] border border-line bg-card px-3.5">
+            <ul className="divide-y divide-divider rounded-2xl bg-bg px-3.5">
               {[...expenses].reverse().map((e) => (
                 <li key={e.id} className="flex items-center gap-3 py-3 text-sm">
                   <div className="min-w-0 flex-1">
@@ -204,13 +204,13 @@ export function NotesTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) 
   return (
     <>
       {onBack && <TabHeader trip={trip} onBack={onBack} />}
-      <main className="flex flex-1 flex-col gap-4 px-5 pt-5 pb-6">
-        <h2 className="text-[15px] font-semibold">Notes</h2>
+      <main className="flex flex-col gap-4 px-5 pt-1 pb-8">
+        
         <NoteForm tripId={trip.id} />
         {notes.length === 0 ? (
           <p className="text-sm text-muted">None yet.</p>
         ) : (
-          <ul className="divide-y divide-divider rounded-[18px] border border-line bg-card px-3.5">
+          <ul className="divide-y divide-divider rounded-2xl bg-bg px-3.5">
             {notes.map((n) => <NoteItem key={n.id} note={n} trip={trip} />)}
           </ul>
         )}

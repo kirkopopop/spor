@@ -1,0 +1,70 @@
+# Product
+
+<!-- impeccable:product-schema 1 -->
+
+## Platform
+
+web
+
+Phone-first progressive web app (installable to the home screen, works offline), used mostly on phones while planning and travelling; also opened on a laptop.
+
+## Users
+
+Households that travel together: today Kirill and Tanya (with their baby Oscar), with occasional guests invited to a single trip (e.g. a friend on a boys' trip). Over the next year the product should work for other households like theirs: couples and families who plan trips together and each use their own Claude.
+
+Two situations:
+
+- **Between trips** (most common): browsing all trips — what's coming up, ideas, past trips, where they've been — and preparing the next one (bookings left, open picks, budget).
+- **During a trip**: on a phone in a city, often one-handed, sometimes offline: what's now and next, when to leave, ticking stops off, logging expenses and notes, split between two phones.
+
+## Product Purpose
+
+One private place where every trip lives and runs: plan in conversation with Claude, then read, adjust and run the plan in spor on both phones. Success: the plan is trustworthy on the day (correct leave-by times, works offline, both phones in step), and planning a trip with Claude ends with it already on both phones.
+
+## Positioning
+
+Planning happens in Claude, not in the app: spor is where the plan lives. Each traveller's own Claude reads and writes the trip through the spor connector (MCP), sees what the others changed (picks, ticks, notes, moved stops) and never overwrites them from a stale copy. The app itself has no AI chat; it is the calm, fast, offline-capable place to read, tweak and run the plan.
+
+## Operating Context
+
+- A trip moves through stages: Idea → Planning → Live → Memory (Memory/journal is not built yet).
+- Planning: day timeline with stops, travel between stops with leave-by times, "Pick one" options, bookings checklist, budget, rain plan per day, spare-time ideas per city, notes.
+- Live: Now/Next, tick stops, expenses split within the household, notes; offline with an edit queue that syncs.
+- Hand edits in the app are light: pick an option, move a time, tick, add/edit/delete a stop, notes, expenses. Larger planning goes through Claude ("Ask Claude" links open claude.ai with the trip and day prefilled).
+- Accounts: magic-link email sign-in. Today sign-up is limited to an allowlist and one household exists.
+
+## Capabilities and Constraints
+
+- Stack: Next.js 16 (App Router, cache components), Supabase (Postgres with RLS, Auth, OAuth 2.1 server for the connector, Realtime), Vercel. Local-first client store in IndexedDB.
+- Data per trip: days, stops (time, kind fixed/normal/optional, travel, options, booking link), bookings, budget lines, spare ideas, expenses, notes, activity log, revision.
+- Settings must cover: household & invites (members, invite a member or a trip guest, remove), Claude connector (URL, status, connected apps, revoke), account (name, email, sign out, delete account), preferences (home currency, units, time format, default timezone, theme).
+- Open decisions (not built yet): self-serve onboarding and household creation for new households; trip-level guest roles; invitations by link/email; Memory stage (journal, photos, route map of what actually happened); Places wishlist and Kit templates; dark mode.
+- English-only UI.
+
+## Brand Commitments
+
+- Name: **spor** (Danish for track/trail), always lowercase; sits in a family of the user's apps (hjem, skarb, puls, ravn, kolo).
+- Voice: plain, short, calm. No instruction copy on screen; empty states are two or three words ("None yet.", "All booked."). Don't say anything twice.
+- Status by styling, not words. The only status words: "To book", "Pick one" (or the picked option's name).
+- The list answers "what and when"; the detail sheet answers "how and what if". The plan sits high on the first screen.
+- References named by the user: Polarsteps (route map, rounded cards), the calm density of Kirill's earlier trip pages, Oura's premium, clean consumer-app feel ("familiar conventions done with care, not an invented visual world").
+- **Standing visual preference (chosen 2026-11-26):** the category standard for travel apps, played straight and executed at full fidelity, with the map on top. Craft bar: Apple Maps / Weather (map with a sheet over it, native-feeling motion and type), Airbnb (clear trip detail screens, generous white space), Oura (calm premium overview, big numbers, quiet hierarchy). No invented visual world.
+
+## Evidence on Hand
+
+- Real trips: London, Glasgow & Edinburgh (19–22 Nov 2026, past; full plan) and Munich (21–25 Dec 2026, planning, empty so far).
+- Mockup canvas with four phone screens (Home, Trip · Planning, Trip · Live, Bookings & budget): https://claude.ai/artifact/WvJ6FRt8iyDc7ciKaE6KHC
+- Original handover: Kirill's `spor-handover.md` (UX rules, data model, phases).
+- No testimonials, users beyond the household, or usage numbers exist; do not invent them.
+
+## Product Principles
+
+1. The plan must be right on the day: leave-by times, offline, both phones in step outrank everything else.
+2. Claude plans; spor holds and runs the plan. The app never grows its own planning assistant.
+3. Instant on a phone: everything reads from the phone's copy; the network only syncs.
+4. Nobody's edit is lost: travellers' changes win over stale copies, every change is attributed.
+5. Calm by default: one quiet line per stop, detail behind a tap, nothing nice-to-have above the plan.
+
+## Accessibility & Inclusion
+
+Used one-handed in the street, in sun and at night: large tap targets, readable contrast, works with reduced motion. No further product-specific standard set.

@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { createStore, get, set } from "idb-keyval";
 import { applyOps, opToRpc, type Op, type StopDraft, type StopPatch } from "./ops";
 import { rowsToTrip, TRIP_SELECT, type TripRow } from "./db";
+import { setClockFormat } from "./format";
 import { hasSupabase } from "./supabase/env";
 import { supabase } from "./supabase/client";
 import type { Expense, Member, Note, Trip } from "./types";
@@ -24,9 +25,14 @@ type State = {
   outbox: Op[]; // edits not yet confirmed by the server
   members: Member[]; // the household, for names and splitting expenses
   me?: string; // signed-in user id
+  email?: string;
+  prefs: Prefs;
 };
 
-const EMPTY: State = { loaded: false, online: true, snapshots: [], outbox: [], members: [] };
+export type Prefs = { timeFormat: "24h" | "12h"; homeCurrency: Trip["currency"] };
+const DEFAULT_PREFS: Prefs = { timeFormat: "24h", homeCurrency: "EUR" };
+
+const EMPTY: State = { loaded: false, online: true, snapshots: [], outbox: [], members: [], prefs: DEFAULT_PREFS };
 let state: State = EMPTY;
 const listeners = new Set<() => void>();
 const idb = typeof indexedDB === "undefined" ? undefined : createStore("spor", "kv");
@@ -66,9 +72,9 @@ async function pushOps(ops: Op[]): Promise<string[]> {
 
 async function fetchMembers(): Promise<Member[]> {
   if (!hasSupabase) return [];
-  const { data, error } = await supabase().from("household_members").select("user_id, display_name");
+  const { data, error } = await supabase().from("household_members").select("user_id, display_name, role");
   if (error) throw error;
-  return data.map((m) => ({ userId: m.user_id, name: m.display_name }));
+  return data.map((m) => ({ userId: m.user_id, name: m.display_name, role: m.role }));
 }
 
 // The other phone's edits (and Claude's writes) arrive as change events; refetch shortly after.
@@ -126,7 +132,10 @@ function start() {
         const { data } = await supabase().auth.getSession();
         if (data.session) {
           owner = data.session.user.id;
-          setState({ me: owner });
+          const meta = data.session.user.user_metadata ?? {};
+          const prefs = { ...DEFAULT_PREFS, ...(meta.prefs as Partial<Prefs> | undefined) };
+          setClockFormat(prefs.timeFormat);
+          setState({ me: owner, email: data.session.user.email, prefs });
         }
       }
       if (idb) {
@@ -185,7 +194,63 @@ export function useSyncStatus() {
 /** The household and who is signed in: names for notes, and who pays for what. */
 export function useHousehold() {
   const s = useStore();
-  return { members: s.members, me: s.me };
+  return { members: s.members, me: s.me, email: s.email };
+}
+
+export function usePrefs() {
+  return useStore().prefs;
+}
+
+/** Saved on the account (user metadata), so they follow the person to every phone. */
+export async function savePrefs(next: Partial<Prefs>) {
+  const prefs = { ...state.prefs, ...next };
+  setClockFormat(prefs.timeFormat);
+  setState({ prefs });
+  if (hasSupabase) {
+    const { error } = await supabase().auth.updateUser({ data: { prefs } });
+    if (error) throw error;
+  }
+}
+
+/** Members changed in Settings: refresh names and roles now rather than at the next sync. */
+export const refreshHousehold = () => sync();
+
+/**
+ * A new trip in the household: an idea without dates, a planning trip with them (one day
+ * per date). Needs a connection; returns the new trip's id once it is on this phone.
+ */
+export async function createTrip(input: { name: string; startDate?: string; endDate?: string; currency: Trip["currency"] }) {
+  if (!hasSupabase) throw new Error("Sign in to create trips.");
+  const sb = supabase();
+  const { data: member, error: mErr } = await sb.from("household_members").select("household_id").eq("user_id", state.me ?? "").limit(1).maybeSingle();
+  if (mErr || !member) throw new Error("You're not in a household yet.");
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Copenhagen";
+  const myName = state.members.find((m) => m.userId === state.me)?.name;
+  const { data: trip, error } = await sb
+    .from("trips")
+    .insert({
+      household_id: member.household_id,
+      name: input.name,
+      stage: input.startDate ? "planning" : "idea",
+      start_date: input.startDate ?? null,
+      end_date: input.endDate ?? null,
+      timezone,
+      currency: input.currency,
+      people: myName ? [myName] : [],
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  if (input.startDate && input.endDate) {
+    const days: { trip_id: string; date: string }[] = [];
+    for (let d = new Date(`${input.startDate}T00:00:00Z`); d <= new Date(`${input.endDate}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1)) {
+      days.push({ trip_id: trip.id, date: d.toISOString().slice(0, 10) });
+    }
+    const { error: dErr } = await sb.from("days").insert(days);
+    if (dErr) throw dErr;
+  }
+  await sync();
+  return trip.id as string;
 }
 
 // Every edit: queue it, show it at once, send it when there's signal.

@@ -1,189 +1,153 @@
 "use client";
 
 import Link from "next/link";
-import { useTrips, useHousehold } from "@/lib/store";
-import { dateRange, daysUntil, money, monthYear, openPicks, plannedTotal, toBookCount } from "@/lib/format";
-import { projectRoutes } from "@/lib/routeMap";
-import { hasSupabase } from "@/lib/supabase/env";
-import { supabase } from "@/lib/supabase/client";
+import { useMemo } from "react";
+import { useHousehold, useTrips } from "@/lib/store";
+import { dateRange, daysUntil, money, monthYear, openPicks, plannedTotal, todayIn, toBookCount } from "@/lib/format";
+import { groupTrips, tripRoutes } from "@/lib/tripView";
 import type { Trip } from "@/lib/types";
+import { Group, Row, Screen } from "./shell/TabBar";
+import { TripMap } from "./map/TripMap";
+import { RouteThumb } from "./RouteThumb";
+import { ChatIcon } from "./icons";
 
+/** Overview: every trip at a glance, the next one first. */
 export function HomeScreen() {
   const { trips, loaded } = useTrips();
   const { members, me } = useHousehold();
-  if (!loaded) return <div className="flex-1" aria-busy="true" />;
-
-  const upcoming = trips.filter((t) => t.stage === "planning" || t.stage === "live");
-  const next = upcoming.find((t) => daysUntil(t.endDate, t.timezone) >= 0);
-  const planning = upcoming.filter((t) => t !== next);
-  const ideas = trips.filter((t) => t.stage === "idea");
-  const past = trips.filter((t) => t.stage === "memory").reverse();
+  const today = todayIn("Europe/Copenhagen");
+  const groups = useMemo(() => groupTrips(trips, today), [trips, today]);
+  const routes = useMemo(() => tripRoutes(trips, today), [trips, today]);
   const myName = members.find((m) => m.userId === me)?.name;
 
+  if (!loaded) return <div className="min-h-dvh" aria-busy="true" />;
+
+  const next = groups.now[0] ?? groups.upcoming[0];
+  const later = [...groups.now, ...groups.upcoming].filter((t) => t !== next);
+  const year = today.slice(0, 4);
+  const thisYear = groups.past.filter((t) => t.startDate.startsWith(year));
+  const daysAway = thisYear.reduce((n, t) => n + t.days.length, 0);
+  const cities = new Set(thisYear.flatMap((t) => t.days.map((d) => d.city).filter(Boolean))).size;
+
   return (
-    <>
-      <header className="flex items-center justify-between px-5 pt-14 pb-3">
-        <h1 className="text-[26px] font-bold tracking-[-0.03em]">spor</h1>
-        <div className="flex" aria-label={members.map((m) => m.name).join(", ")}>
-          {members.map((m, i) => (
-            <div
-              key={m.userId}
-              className={`flex size-8 items-center justify-center rounded-full border-2 border-bg text-[13px] font-semibold ${
-                i === 0 ? "bg-ink text-white" : "-ml-2 bg-[#C9D6CF] text-ink"
-              }`}
-            >
-              {m.name[0]}
-            </div>
-          ))}
-        </div>
-      </header>
-
-      <main className="flex flex-1 flex-col gap-6 px-5 pb-6">
-        <RouteCard trips={trips} past={past} />
-        {next ? <NextUp trip={next} myName={myName} /> : null}
-
-        {planning.length > 0 && (
-          <section>
-            <h2 className="mb-2 text-[15px] font-semibold">Planning</h2>
-            <div className="divide-y divide-divider rounded-2xl border border-line bg-card">
-              {planning.map((t) => (
-                <Link key={t.id} href={`/trips/${t.id}`} className="press flex items-center gap-3 px-3.5 py-3">
-                  <div className="size-9 rounded-[10px] bg-[#EAF0E6]" />
-                  <div className="flex-1">
-                    <div className="text-[15px] font-semibold">{t.name}</div>
-                    <div className="text-[13px] text-muted">{monthYear(t.startDate)}</div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {ideas.length > 0 && (
-          <section>
-            <h2 className="mb-2 text-[15px] font-semibold">Ideas</h2>
-            <div className="flex flex-wrap gap-2 text-sm">
-              {ideas.map((t) => (
-                <Link key={t.id} href={`/trips/${t.id}`} className="press rounded-xl border border-line bg-card px-3 py-2">
-                  {t.name}
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section>
-          <h2 className="mb-2 text-[15px] font-semibold">Past</h2>
-          {past.length === 0 ? (
-            <p className="text-sm text-muted">None yet.</p>
-          ) : (
-            <div className="flex flex-col text-sm">
-              {past.map((t) => (
-                <Link key={t.id} href={`/trips/${t.id}`} className="press flex justify-between py-2">
-                  <span>{t.name}</span>
-                  <span className="text-muted">{monthYear(t.startDate)}</span>
-                </Link>
-              ))}
-            </div>
+    <Screen
+      title="Overview"
+      action={
+        <Link href="/settings" aria-label="Settings" className="press mb-1.5 flex size-9 items-center justify-center rounded-full bg-ink text-[15px] font-semibold text-white">
+          {(myName ?? "spor")[0].toUpperCase()}
+        </Link>
+      }
+    >
+      {routes.length > 0 && (
+        <div className="relative h-[220px] overflow-hidden rounded-[22px] shadow-[var(--shadow-card)]">
+          <TripMap routes={routes} interactive={false} padding={{ top: 64, bottom: 40, left: 28, right: 28 }} className="absolute inset-0" label="Map of your trips" />
+          {thisYear.length > 0 && (
+            <p className="absolute top-3 left-3 rounded-full bg-card/92 px-3 py-1.5 text-[13px] text-ink-2 shadow-[var(--shadow-float)] backdrop-blur">
+              {year}: <b className="font-semibold text-ink">{thisYear.length}</b> {thisYear.length === 1 ? "trip" : "trips"} ·{" "}
+              <b className="font-semibold text-ink">{daysAway}</b> days away · <b className="font-semibold text-ink">{cities}</b> {cities === 1 ? "city" : "cities"}
+            </p>
           )}
-        </section>
+        </div>
+      )}
 
-        {hasSupabase && (
-          <button
-            onClick={async () => {
-              await supabase().auth.signOut();
-              // A full load on purpose: it drops this session's in-memory store before the next person signs in.
-              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-              window.location.assign("/login");
-            }}
-            className="mt-auto self-start py-2 text-[13px] text-muted"
-          >
-            Sign out
-          </button>
-        )}
-      </main>
-    </>
+      {next ? <NextTrip trip={next} live={groups.now.includes(next)} myName={myName} /> : <EmptyNext />}
+
+      {later.length > 0 && <TripGroup title="Upcoming" trips={later} />}
+      {groups.ideas.length > 0 && <TripGroup title="Ideas" trips={groups.ideas} />}
+      {groups.past.length > 0 && <TripGroup title="Past" trips={groups.past} />}
+    </Screen>
   );
 }
 
-/** Every trip's route on one quiet map, with the totals that matter. */
-function RouteCard({ trips, past }: { trips: Trip[]; past: Trip[] }) {
-  const W = 350;
-  const H = 170;
-  const { routes } = projectRoutes(trips, W, H, 22);
-  if (routes.length === 0) return null;
-  const daysAway = past.reduce((n, t) => n + t.days.length, 0);
-  const cities = new Set(trips.flatMap((t) => t.days.map((d) => d.city).filter(Boolean))).size;
-  const isPast = new Set(past.map((t) => t.id));
-
-  return (
-    <div className="relative overflow-hidden rounded-[20px] bg-[#E4EAEC]">
-      <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label="Map of your trips">
-        <rect width={W} height={H} fill="#E4EAEC" />
-        {routes.map((r) => (
-          <g key={r.tripId}>
-            <polyline
-              points={r.points.map((p) => p.join(",")).join(" ")}
-              fill="none"
-              stroke="#E2553A"
-              strokeWidth={2.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeDasharray={isPast.has(r.tripId) ? undefined : "1 6"}
-              opacity={0.9}
-            />
-            <circle cx={r.points[0][0]} cy={r.points[0][1]} r={4} fill="#fff" stroke="#E2553A" strokeWidth={2} />
-            <circle cx={r.points.at(-1)![0]} cy={r.points.at(-1)![1]} r={4} fill="#16181D" />
-          </g>
-        ))}
-      </svg>
-      <div className="absolute bottom-3 left-3.5 flex gap-4 text-xs text-ink-2">
-        <div><b className="text-[15px] text-ink">{past.length}</b> {past.length === 1 ? "trip" : "trips"}</div>
-        <div><b className="text-[15px] text-ink">{cities}</b> {cities === 1 ? "city" : "cities"}</div>
-        <div><b className="text-[15px] text-ink">{daysAway}</b> {daysAway === 1 ? "day" : "days"} away</div>
-      </div>
-    </div>
-  );
-}
-
-function NextUp({ trip, myName }: { trip: Trip; myName?: string }) {
+function NextTrip({ trip, live, myName }: { trip: Trip; live: boolean; myName?: string }) {
   const days = daysUntil(trip.startDate, trip.timezone);
-  const when = days > 1 ? `in ${days} days` : days === 1 ? "tomorrow" : "now";
   const toBook = toBookCount(trip);
   const picks = openPicks(trip);
   const planned = plannedTotal(trip);
-  const others = trip.people.filter((p) => p !== myName);
   const empty = trip.days.every((d) => d.stops.length === 0);
+  const others = trip.people.filter((p) => p !== myName);
 
   return (
-    <div className="rounded-[20px] border border-line bg-card p-4">
-      <Link href={`/trips/${trip.id}`} className="press block">
-        <div className="text-xs font-medium text-muted">Next up · {when}</div>
-        <div className="mt-1 text-[22px] font-bold tracking-[-0.02em]">{trip.name}</div>
-        <div className="mt-0.5 text-sm text-ink-2">
-          {dateRange(trip.startDate, trip.endDate)}
-          {others.length > 0 && ` · ${others.join(", ")}`}
+    <section className="overflow-hidden rounded-[22px] bg-card shadow-[var(--shadow-card)]">
+      <Link href={`/trips/${trip.id}`} className="press flex items-center gap-5 p-5">
+        <div className="tnum shrink-0 text-center">
+          {live ? (
+            <div className="text-[15px] font-semibold text-accent">Now</div>
+          ) : (
+            <>
+              <div className="text-[52px] leading-none font-semibold tracking-[-0.03em]">{days}</div>
+              <div className="mt-1 text-[13px] text-muted">{days === 1 ? "day" : "days"}</div>
+            </>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[22px] leading-tight font-bold tracking-[-0.02em]">{trip.name}</h2>
+          <p className="mt-1 text-[15px] text-ink-2">
+            {dateRange(trip.startDate, trip.endDate)}
+            {others.length > 0 && ` · ${others.join(", ")}`}
+          </p>
         </div>
       </Link>
-      {empty ? (
-        // An empty trip has one useful next step: plan it with Claude.
-        <a
-          href={`https://claude.ai/new?q=${encodeURIComponent(`Let's plan ${trip.name} in spor (${trip.startDate} to ${trip.endDate}, ${trip.people.join(", ")}).`)}`}
-          target="_blank"
-          rel="noreferrer"
-          className="press mt-3.5 inline-block rounded-full bg-ink px-3.5 py-2 text-[13px] font-semibold text-white"
-        >
-          Plan with Claude
-        </a>
-      ) : (
-        (toBook > 0 || picks > 0 || planned > 0) && (
-          <div className="mt-3.5 flex flex-wrap gap-2 text-[13px]">
-            {toBook > 0 && <span className="rounded-full bg-accent-soft px-2.5 py-1.5 font-semibold text-accent-ink">{toBook} to book</span>}
-            {picks > 0 && <span className="rounded-full bg-divider px-2.5 py-1.5 text-ink-2">{picks} picks open</span>}
-            {planned > 0 && <span className="rounded-full bg-divider px-2.5 py-1.5 text-ink-2">{money(planned, trip.currency)} planned</span>}
+      <div className="flex flex-wrap gap-2 border-t border-divider px-5 py-3.5">
+        {empty ? (
+          <a
+            href={`https://claude.ai/new?q=${encodeURIComponent(`Let's plan ${trip.name} in spor (${trip.startDate} to ${trip.endDate}, ${trip.people.join(", ")}).`)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="press inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-[15px] font-semibold text-white"
+          >
+            <ChatIcon size={17} />
+            Plan with Claude
+          </a>
+        ) : (
+          <>
+            {toBook > 0 && <Chip tone="fixed">{toBook} to book</Chip>}
+            {picks > 0 && <Chip>{picks} picks open</Chip>}
+            {planned > 0 && <Chip>{money(planned, trip.currency)} planned</Chip>}
+            {toBook === 0 && picks === 0 && <Chip tone="ok">All booked</Chip>}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function EmptyNext() {
+  return (
+    <section className="rounded-[22px] bg-card p-5 shadow-[var(--shadow-card)]">
+      <h2 className="text-[20px] font-bold tracking-[-0.02em]">No trip coming up</h2>
+      <a
+        href={`https://claude.ai/new?q=${encodeURIComponent("Let's plan a new trip in spor.")}`}
+        target="_blank"
+        rel="noreferrer"
+        className="press mt-3 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-[15px] font-semibold text-white"
+      >
+        <ChatIcon size={17} />
+        Plan with Claude
+      </a>
+    </section>
+  );
+}
+
+function Chip({ children, tone }: { children: React.ReactNode; tone?: "fixed" | "ok" }) {
+  const cls = tone === "fixed" ? "bg-fixed-soft text-fixed" : tone === "ok" ? "bg-ok-soft text-ok" : "bg-soft text-ink-2";
+  return <span className={`rounded-full px-3 py-1.5 text-[13px] font-medium ${cls}`}>{children}</span>;
+}
+
+export function TripGroup({ title, trips }: { title: string; trips: Trip[] }) {
+  return (
+    <Group title={title}>
+      {trips.map((t) => (
+        <Row key={t.id} href={`/trips/${t.id}`} chevron>
+          <div className="flex items-center gap-3.5">
+            <RouteThumb trip={t} size={48} />
+            <div className="min-w-0">
+              <div className="truncate text-[16px] font-semibold">{t.name}</div>
+              <div className="text-[14px] text-muted">{t.startDate ? `${dateRange(t.startDate, t.endDate)} · ${monthYear(t.startDate).slice(-4)}` : "No dates yet"}</div>
+            </div>
           </div>
-        )
-      )}
-    </div>
+        </Row>
+      ))}
+    </Group>
   );
 }

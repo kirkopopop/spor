@@ -58,18 +58,18 @@ export default function Consent() {
           <p className="mt-6 text-[17px] leading-snug">
             <b className="font-semibold">{state.details.client}</b> wants to read and edit your trips.
           </p>
-          <p className={`mt-2 text-sm ${state.details.trusted ? "text-muted" : "font-semibold text-accent-ink"}`}>
+          <p className={`mt-2 text-sm ${state.details.trusted ? "text-muted" : "font-semibold text-danger"}`}>
             {state.details.trusted
               ? `Returns to ${state.details.host}.`
               : `Not Claude: it would send access to ${state.details.host}.`}
           </p>
           <div className="mt-8 flex flex-col gap-3">
             {state.details.trusted && (
-              <button onClick={() => decide(true)} className="h-12 rounded-[14px] bg-ink text-[15px] font-semibold text-white">
+              <button onClick={() => decide(true)} className="h-12 rounded-xl bg-accent text-[16px] font-semibold text-white">
                 Allow
               </button>
             )}
-            <button onClick={() => decide(false)} className="h-12 rounded-[14px] border border-line bg-card text-[15px]">
+            <button onClick={() => decide(false)} className="h-12 rounded-xl bg-soft text-[16px]">
               Deny
             </button>
           </div>

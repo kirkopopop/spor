@@ -46,3 +46,6 @@ next-env.d.ts
 
 # packaged skill for claude.ai upload (built from skills/*/)
 /skills/*.zip
+
+# copied from node_modules on dev/build
+/public/maplibre-worker.mjs

@@ -1,24 +1,28 @@
 "use client";
 
 import type { Booking, Stop, Trip } from "@/lib/types";
+import { clockTime, leaveBy, mapsSearch, MODE_LABEL, shiftTime, showTime, travelMinutes } from "@/lib/format";
+import { Back, Check, Directions, Mode, NoteIcon } from "./icons";
+import { RichText } from "./RichText";
 import { NoteForm } from "./Forms";
 import { NoteItem } from "./TripTabs";
-import { leaveBy, mapsSearch, MODE_LABEL, shiftTime, showTime, travelMinutes } from "@/lib/format";
-import { Check, Directions, Mode } from "./icons";
-import { RichText } from "./RichText";
 
-/** The sheet answers "how and what if"; the list already said "what and when". */
+/** A stop as a place card in the sheet: the list said what and when; this says how and what if. */
 export function StopDetail({
   trip,
   stop,
+  number,
   booking,
+  onBack,
   onShift,
   onPick,
   onEdit,
 }: {
   trip: Trip;
   stop: Stop;
+  number?: number;
   booking?: Booking;
+  onBack?: () => void;
   onShift: (time: string) => void;
   onPick: (optionId: string) => void;
   onEdit: () => void;
@@ -30,82 +34,109 @@ export function StopDetail({
     : stop.lat != null
       ? `https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}`
       : undefined;
+  const fixed = stop.kind === "fixed";
 
   return (
-    <article className="pr-10">
-      <div className={`text-sm tabular-nums ${stop.kind === "fixed" ? "font-semibold text-accent-ink" : "text-muted"}`}>
-        {showTime(stop)}
-        {stop.kind === "fixed" && " · Fixed"}
-        {stop.kind === "optional" && " · Optional"}
-      </div>
-      <h3 className="mt-1 text-[22px] leading-tight font-bold tracking-[-0.02em]">{stop.name}</h3>
-
-      <div className="mt-2 flex flex-wrap gap-2 text-xs">
-        {booking && (
+    <article className="px-5 pb-8 [animation:fade-in_180ms_ease-out]">
+      {onBack && (
+        <button onClick={onBack} className="press -ml-1 mb-2 inline-flex items-center gap-1 py-1 text-[15px] font-medium text-accent">
+          <Back size={17} />
+          Day
+        </button>
+      )}
+      <div className="flex items-start gap-3">
+        {number != null && (
           <span
-            className={`rounded-full px-2.5 py-1 font-semibold ${
-              booking.status === "booked" ? "bg-[#E6F0EA] text-ok" : "bg-accent-soft text-accent-ink"
+            className={`tnum mt-1 flex size-8 shrink-0 items-center justify-center rounded-full text-[14px] font-semibold text-white ${
+              stop.doneAt ? "bg-ok" : fixed ? "bg-fixed" : "bg-accent"
             }`}
           >
+            {number}
+          </span>
+        )}
+        <div className="min-w-0">
+          <h3 className="text-[24px] leading-tight font-bold tracking-[-0.02em] text-balance">{stop.name}</h3>
+          <p className="tnum mt-1 text-[15px]">
+            <span className={fixed ? "font-semibold text-fixed" : "text-ink-2"}>{showTime(stop)}</span>
+            <span className="text-muted">
+              {fixed && " · Fixed"}
+              {stop.kind === "optional" && " · Optional"}
+              {stop.who && ` · ${stop.who}`}
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2 text-[13px]">
+        {booking && (
+          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold ${booking.status === "booked" ? "bg-ok-soft text-ok" : "bg-fixed-soft text-fixed"}`}>
+            {booking.status === "booked" && <Check size={13} />}
             {booking.status === "booked" ? "Booked" : "To book"}
           </span>
         )}
-        {stop.fee && <span className="rounded-full bg-divider px-2.5 py-1 text-ink-2">{stop.fee.label}</span>}
-        {stop.who && <span className="rounded-full bg-divider px-2.5 py-1 text-ink-2">{stop.who}</span>}
+        {stop.fee && <span className="rounded-full bg-soft px-2.5 py-1 text-ink-2">{stop.fee.label}</span>}
+      </div>
+
+      <div className="mt-4 grid grid-cols-4 gap-2">
+        <ActionButton href={maps} label="Directions" primary>
+          <Directions size={19} />
+        </ActionButton>
+        <ActionButton onClick={() => onShift(shiftTime(stop.time, -15))} label="Earlier">
+          <span className="text-[15px] font-semibold">−15</span>
+        </ActionButton>
+        <ActionButton onClick={() => onShift(shiftTime(stop.time, 15))} label="Later">
+          <span className="text-[15px] font-semibold">+15</span>
+        </ActionButton>
+        <ActionButton onClick={onEdit} label="Edit">
+          <NoteIcon size={18} />
+        </ActionButton>
       </div>
 
       {stop.go && (
-        <div className="mt-4 flex gap-3 rounded-2xl bg-bg p-3.5 text-sm">
-          <Mode mode={stop.go.mode} size={18} className="mt-0.5 shrink-0 text-ink-2" />
+        <section className="mt-5 flex gap-3 rounded-2xl bg-bg p-4 text-[15px]">
+          <Mode mode={stop.go.mode} size={20} className="mt-0.5 shrink-0 text-ink-2" />
           <div>
-            <div className="font-medium">
+            <div className="tnum font-semibold">
               {MODE_LABEL[stop.go.mode] ?? stop.go.mode} · {stop.go.est ? "~" : ""}
               {travelMinutes(stop.go.min)}
-              {leave && <span className="text-accent-ink"> · leave by {leave}</span>}
+              {leave && <span className="text-fixed"> · leave by {clockTime(leave)}</span>}
             </div>
-            {stop.go.text && <p className="mt-0.5 text-ink-2">{stop.go.text}</p>}
+            {stop.go.text && <p className="mt-1 leading-relaxed text-ink-2">{stop.go.text}</p>}
           </div>
-        </div>
+        </section>
       )}
 
-      {stop.body && <p className="mt-4 text-[15px] leading-relaxed text-ink-2">{stop.body}</p>}
+      {stop.body && <p className="mt-5 text-[16px] leading-relaxed text-ink-2">{stop.body}</p>}
 
       {stop.options && stop.options.length > 0 && (
-        <section className="mt-4">
-          {stop.pickOne && <h4 className="mb-2 text-xs font-semibold text-accent-ink">Pick one</h4>}
-          <ul className="divide-y divide-divider rounded-2xl border border-line">
+        <section className="mt-5">
+          <h4 className={`mb-2 text-[13px] font-medium tracking-[0.02em] uppercase ${stop.pickOne ? "text-accent" : "text-muted"}`}>
+            {stop.pickOne ? "Pick one" : "Options"}
+          </h4>
+          <ul className="divide-y divide-divider overflow-hidden rounded-2xl border border-line">
             {stop.options.map((o) => {
               const picked = o.id === stop.pickedOptionId;
               const inner = (
                 <>
                   {stop.pickOne && (
-                    <span
-                      className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-[1.5px] ${
-                        picked ? "border-ink bg-ink text-white" : "border-faint"
-                      }`}
-                    >
+                    <span className={`mt-0.5 flex size-[22px] shrink-0 items-center justify-center rounded-full border-2 ${picked ? "border-accent bg-accent text-white" : "border-faint"}`}>
                       {picked && <Check size={12} />}
                     </span>
                   )}
                   <span className="flex-1">
-                    <span className="block text-[15px] font-medium">{o.name}</span>
-                    {o.body && <span className="mt-0.5 block text-[13px] text-muted">{o.body}</span>}
+                    <span className="block text-[16px] font-medium">{o.name}</span>
+                    {o.body && <span className="mt-0.5 block text-[14px] leading-snug text-muted">{o.body}</span>}
                   </span>
                 </>
               );
               return (
                 <li key={o.id}>
                   {stop.pickOne ? (
-                    <button onClick={() => onPick(o.id)} className="flex w-full gap-3 px-3.5 py-3 text-left">
+                    <button onClick={() => onPick(o.id)} aria-pressed={picked} className="press flex w-full gap-3 px-4 py-3 text-left">
                       {inner}
                     </button>
                   ) : (
-                    <a
-                      href={o.mapsQuery ? mapsSearch(o.mapsQuery) : undefined}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex gap-3 px-3.5 py-3"
-                    >
+                    <a href={o.mapsQuery ? mapsSearch(o.mapsQuery) : undefined} target="_blank" rel="noreferrer" className="press flex gap-3 px-4 py-3">
                       {inner}
                     </a>
                   )}
@@ -117,48 +148,39 @@ export function StopDetail({
       )}
 
       {stop.more && (
-        <section className="mt-4 rounded-2xl bg-bg p-3.5 text-sm leading-relaxed text-ink-2">
+        <section className="mt-5 rounded-2xl bg-bg p-4 text-[15px] leading-relaxed text-ink-2">
           <RichText text={stop.more} />
         </section>
       )}
 
-      <section className="mt-4">
+      <section className="mt-6">
+        <h4 className="mb-1 text-[13px] font-medium tracking-[0.02em] text-muted uppercase">Notes</h4>
         {notes.length > 0 && (
-          <ul className="mb-2 divide-y divide-divider rounded-2xl border border-line px-3.5">
+          <ul className="mb-2 divide-y divide-divider">
             {notes.map((n) => <NoteItem key={n.id} note={n} trip={trip} showWhere={false} />)}
           </ul>
         )}
         <NoteForm tripId={trip.id} stopId={stop.id} compact />
       </section>
-
-      <div className="mt-5 flex gap-2">
-        {maps && (
-          <a
-            href={maps}
-            target="_blank"
-            rel="noreferrer"
-            className="flex flex-1 items-center justify-center gap-2 rounded-[14px] bg-ink py-3 text-sm font-semibold text-white"
-          >
-            <Directions size={16} />
-            Google Maps
-          </a>
-        )}
-        <button
-          onClick={() => onShift(shiftTime(stop.time, -15))}
-          className="rounded-[14px] border border-line px-4 py-3 text-sm"
-        >
-          Earlier
-        </button>
-        <button
-          onClick={() => onShift(shiftTime(stop.time, 15))}
-          className="rounded-[14px] border border-line px-4 py-3 text-sm"
-        >
-          Later
-        </button>
-      </div>
-      <button onClick={onEdit} className="press mt-2 h-11 w-full rounded-[14px] text-sm text-ink-2">
-        Edit stop
-      </button>
     </article>
+  );
+}
+
+function ActionButton({ children, label, onClick, href, primary }: { children: React.ReactNode; label: string; onClick?: () => void; href?: string; primary?: boolean }) {
+  const cls = `press flex h-[60px] flex-col items-center justify-center gap-1 rounded-2xl text-[12px] font-medium ${
+    primary ? "bg-accent text-white" : "bg-soft text-ink"
+  } ${!href && !onClick ? "opacity-40" : ""}`;
+  if (href)
+    return (
+      <a href={href} target="_blank" rel="noreferrer" className={cls}>
+        {children}
+        {label}
+      </a>
+    );
+  return (
+    <button onClick={onClick} disabled={!onClick} className={cls}>
+      {children}
+      {label}
+    </button>
   );
 }

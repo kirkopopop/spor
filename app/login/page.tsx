@@ -42,16 +42,16 @@ export default function Login() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-12 rounded-[14px] border border-line bg-card px-4 text-[16px] outline-none focus:border-ink"
+            className="h-12 rounded-xl border border-line bg-card px-4 text-[16px] outline-none focus:border-accent"
           />
           <button
             type="submit"
             disabled={status === "sending"}
-            className="h-12 rounded-[14px] bg-ink text-[15px] font-semibold text-white disabled:opacity-60"
+            className="h-12 rounded-xl bg-accent text-[16px] font-semibold text-white disabled:opacity-60"
           >
             {status === "sending" ? "Sending…" : "Send link"}
           </button>
-          {status === "error" && <p className="text-sm text-accent-ink">Not this email.</p>}
+          {status === "error" && <p className="text-sm text-danger">Not this email.</p>}
         </form>
       )}
     </main>

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#F6F5F2",
+  themeColor: "#F5F6F8",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <RegisterSW />
         {/* Every screen is private, per-user data read at request time, so it all streams. */}
         <Suspense>
-          <div className="mx-auto flex min-h-dvh max-w-[440px] flex-col">{children}</div>
+          <div className="min-h-dvh">{children}</div>
         </Suspense>
       </body>
     </html>

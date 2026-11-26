@@ -103,7 +103,7 @@ export type Expense = {
   spentAt: string;
 };
 
-export type Member = { userId: string; name: string };
+export type Member = { userId: string; name: string; role?: "owner" | "member" };
 
 export type Trip = {
   id: string;

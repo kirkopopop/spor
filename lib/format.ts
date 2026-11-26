@@ -61,7 +61,20 @@ const fromMin = (n: number) => {
 
 export const shiftTime = (t: string, delta: number) => fromMin(toMin(t) + delta);
 
-export const showTime = (s: Pick<Stop, "time" | "approx">) => (s.approx ? `~${s.time}` : s.time);
+// The signed-in person's clock preference (Settings → Preferences); the store sets it.
+let clock: "24h" | "12h" = "24h";
+export const setClockFormat = (f: "24h" | "12h") => {
+  clock = f;
+};
+
+/** "18:30" or "6:30 pm", per the person's preference. Stored times are always HH:MM. */
+export function clockTime(t: string): string {
+  if (clock === "24h") return t;
+  const [h, m] = t.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
+}
+
+export const showTime = (s: Pick<Stop, "time" | "approx">) => (s.approx ? "~" : "") + clockTime(s.time);
 
 /** Slack kept before every fixed time (handover: ≥15 min before each fixed stop). */
 export const LEAVE_SLACK_MIN = 15;

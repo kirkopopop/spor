@@ -7,8 +7,8 @@ import { addExpense, addNote, deleteStop, saveStop, useHousehold } from "@/lib/s
 // Small forms for edits made by hand on the phone. Planning stays with Claude;
 // these cover the quick fixes: a stop, an expense, a note.
 
-const input = "h-12 w-full rounded-[14px] border border-line bg-card px-4 text-[16px] outline-none focus:border-ink";
-const primary = "press h-12 w-full rounded-[14px] bg-ink text-[15px] font-semibold text-white disabled:opacity-40";
+export const field = "h-12 w-full rounded-xl border border-line bg-card px-4 text-[16px] text-ink outline-none transition-colors focus:border-accent";
+export const primaryButton = "press h-12 w-full rounded-xl bg-accent text-[16px] font-semibold text-white disabled:opacity-40";
 const TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
 function Segmented<T extends string>({ value, options, onChange, label }: {
@@ -48,11 +48,11 @@ export function StopForm({ trip, day, stop, onDone }: { trip: Trip; day: Day; st
       <div className="flex gap-2">
         <label className="w-28 shrink-0">
           <span className="sr-only">Time</span>
-          <input type="time" required value={time} onChange={(e) => setTime(e.target.value)} className={input} />
+          <input type="time" required value={time} onChange={(e) => setTime(e.target.value)} className={field} />
         </label>
         <label className="flex-1">
           <span className="sr-only">Day</span>
-          <select value={dayId} onChange={(e) => setDayId(e.target.value)} className={input}>
+          <select value={dayId} onChange={(e) => setDayId(e.target.value)} className={field}>
             {trip.days.map((d) => (
               <option key={d.id} value={d.id}>{d.date}{d.title ? ` · ${d.title}` : ""}</option>
             ))}
@@ -61,24 +61,24 @@ export function StopForm({ trip, day, stop, onDone }: { trip: Trip; day: Day; st
       </div>
       <label>
         <span className="sr-only">Name</span>
-        <input required placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className={input} maxLength={200} />
+        <input required placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className={field} maxLength={200} />
       </label>
       <Segmented label="Kind" value={kind} onChange={setKind}
         options={[{ value: "fixed", label: "Fixed" }, { value: "normal", label: "Normal" }, { value: "optional", label: "Optional" }]} />
       <label>
         <span className="sr-only">Details</span>
         <textarea placeholder="Details" value={body} onChange={(e) => setBody(e.target.value)} rows={3}
-          className="w-full rounded-[14px] border border-line bg-card px-4 py-3 text-[16px] outline-none focus:border-ink" />
+          className="w-full rounded-[14px] border border-line bg-card px-4 py-3 text-[16px] outline-none focus:border-accent" />
       </label>
-      <button type="submit" disabled={!valid} className={primary}>Save</button>
+      <button type="submit" disabled={!valid} className={primaryButton}>Save</button>
       {stop &&
         (confirmDelete ? (
           <button type="button" onClick={() => { deleteStop(trip.id, stop.id); onDone(); }}
-            className="press h-12 rounded-[14px] bg-accent-soft text-[15px] font-semibold text-accent-ink">
+            className="press h-12 rounded-[14px] bg-fixed-soft text-[15px] font-semibold text-danger">
             Delete {stop.name}?
           </button>
         ) : (
-          <button type="button" onClick={() => setConfirmDelete(true)} className="h-11 text-[15px] text-accent-ink">Delete</button>
+          <button type="button" onClick={() => setConfirmDelete(true)} className="h-11 text-[15px] text-danger">Delete</button>
         ))}
     </form>
   );
@@ -109,14 +109,14 @@ export function ExpenseForm({ trip, stopId, onDone }: { trip: Trip; stopId?: str
       <label>
         <span className="sr-only">Amount in {trip.currency}</span>
         <input autoFocus required inputMode="decimal" placeholder={`Amount, ${trip.currency}`} value={amount}
-          onChange={(e) => setAmount(e.target.value)} className={`${input} text-[22px] font-semibold`} />
+          onChange={(e) => setAmount(e.target.value)} className={`${field} text-[22px] font-semibold`} />
       </label>
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Category">
         {categories.map((c) => {
           const label = trip.budget.find((b) => b.category === c)?.label ?? c[0].toUpperCase() + c.slice(1);
           return (
             <button key={c} type="button" role="radio" aria-checked={c === category} onClick={() => setCategory(c)}
-              className={`rounded-full px-3 py-2 text-[13px] ${c === category ? "bg-ink text-white" : "bg-divider text-ink-2"}`}>
+              className={`rounded-full px-3 py-2 text-[13px] ${c === category ? "bg-accent text-white" : "bg-divider text-ink-2"}`}>
               {label}
             </button>
           );
@@ -128,9 +128,9 @@ export function ExpenseForm({ trip, stopId, onDone }: { trip: Trip; stopId?: str
       )}
       <label>
         <span className="sr-only">Note</span>
-        <input placeholder="Note" value={note} onChange={(e) => setNote(e.target.value)} className={input} maxLength={200} />
+        <input placeholder="Note" value={note} onChange={(e) => setNote(e.target.value)} className={field} maxLength={200} />
       </label>
-      <button type="submit" disabled={!valid} className={primary}>Add</button>
+      <button type="submit" disabled={!valid} className={primaryButton}>Add</button>
     </form>
   );
 }
@@ -152,9 +152,9 @@ export function NoteForm({ tripId, stopId, dayId, onDone, compact }: {
         <span className="sr-only">Note</span>
         <textarea placeholder={stopId ? "Note on this stop" : "Note"} value={body} onChange={(e) => setBody(e.target.value)}
           rows={compact ? 2 : 3} maxLength={4000}
-          className="w-full rounded-[14px] border border-line bg-card px-4 py-3 text-[16px] outline-none focus:border-ink" />
+          className="w-full rounded-[14px] border border-line bg-card px-4 py-3 text-[16px] outline-none focus:border-accent" />
       </label>
-      {body.trim() && <button type="submit" className={primary}>Add note</button>}
+      {body.trim() && <button type="submit" className={primaryButton}>Add note</button>}
     </form>
   );
 }
