@@ -30,8 +30,9 @@ The travellers also edit spor by hand (pick options, tick stops, move times, add
 Order matters, because stops point at bookings and days:
 
 1. **New trip:** `create_trip` with name, dates, the destination's IANA timezone, currency, everyone's first names, stage `planning`. Days are created for each date. **Existing trip:** use its id; change dates or stage with `update_trip`.
+   Name the trip after where it goes ("Munich", "Lisbon & Porto", "Edinburgh weekend"), not the occasion ("Christmas break"): spor reads the destination from the name to give the trip its landmark icon and photo, then falls back to the days' `city`/`place`, and only last to the timezone.
 2. **`upsert_bookings`**: one row per thing to book or already booked (flights, every hotel stay, timed tickets, restaurant tables). `status` is `booked` only if it really is. One-line `note`, `est_cost` when known. Booking references go in `private_ref`, never in stop text. Keep the returned ids.
-3. **`upsert_days`**: for each date a `title` of at most 40 characters (the day's shape: "Arrive · Altstadt", "Zugspitze day"), `city` as a lowercase slug ("munich") that the spare ideas will share, `place` (what shows under the date tab, e.g. "Munich" or "Munich → Garmisch"), a short `intro`, and a `rain` plan of 1–3 sentences saying what to swap if it is wet.
+3. **`upsert_days`**: for each date a `title` of at most 40 characters (the day's shape: "Arrive · Altstadt", "Zugspitze day"), `city` as a lowercase slug ("munich") that the spare ideas will share, `place` (what shows under the date tab, e.g. "Munich" or "Munich → Garmisch"), a short `intro`, and a `rain` plan of 1–3 sentences saying what to swap if it is wet. Always fill `city` and `place`: they also tell spor where the trip goes.
 4. **`upsert_stops`**: per day or for the whole trip in one batch. See the rules for what each stop needs.
 5. **`set_budget`**: replaces the plan. Totals for the whole party per category (e.g. flights, stay, food, transport, tickets), covering every booking and hotel night.
 6. **`upsert_spare_ideas`**: at least three indoor ideas per city, with `minutes`, `indoor`, coordinates and a one-line note.
@@ -46,6 +47,10 @@ Order matters, because stops point at bookings and days:
 
 Times are `HH:MM`, 24-hour, local to the trip's timezone. spor computes leave-by times itself (travel minutes plus 15 minutes of slack before fixed stops); set `go.leave` only when the real answer differs (a train you must catch earlier).
 
+**Walks are routed by spor.** When a stop is reached on foot (`go.mode: "walk"`) and both it and the stop right before it have coordinates, spor draws the walk along the real streets and shows its own walking time in the list, the stop sheet and the leave-by, in place of your minutes. Your minutes are still stored and are the fallback (offline, or a walk spor can't route). It can't route a walk that starts right after a stop with no place on the map (a train, a flight): there your minutes are what people see. Tube, train, bus and taxi legs are never routed: your journey-planner minutes are what people see, so get those right.
+
+**Ticks are the trip's memory.** Once a trip ends, spor builds its Memory recap from the stops Kirill and Tanya ticked: places reached, places they didn't make, km on foot, spend. A day nobody ticked is told from its plan, never as "missed". So never tick, untick or re-time a stop on their behalf to tidy the record. When asked to wrap a trip up afterwards, set its stage to `memory` with `update_trip` and leave a short `add_note` on the trip if there is something worth remembering (the notes become its journal).
+
 ## Planning rules
 
 1. Every stop has a time. Mark what cannot move as `fixed` (trains, flights, booked slots); mark at least two stops a day `optional` (dropped first if late).
@@ -57,7 +62,7 @@ Times are `HH:MM`, 24-hour, local to the trip's timezone. spor computes leave-by
 7. Bags are a stop (drop and collect), with the desk or locker hours in `body`.
 8. With a baby: build naps and bedtime in as stops, keep walks pram-friendly, and keep travel days light.
 9. Stop names are short and specific (place plus what you do there): the name is all the list shows. The detail goes in `body`, `more`, `options` and `go.text`, which open in the stop's sheet, so write those as fully as is useful.
-10. Plain language, exact names and addresses in `maps_query`, coordinates when known, prices with `~` when approximate (`fee: { label: "~€25", paid: true }`).
+10. Plain language, exact names and addresses in `maps_query`, prices with `~` when approximate (`fee: { label: "~€25", paid: true }`). Give every stop with a real place its `lat`/`lng` (look them up): a stop without them gets no pin, and the walks into and out of it can't be routed. Only journeys (trains, flights) go without, marked `off_map`.
 11. Phone numbers for restaurants are fine in `more`; booking references only in the booking's `private_ref`.
 
 ## Asking about changes
