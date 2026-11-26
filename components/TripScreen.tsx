@@ -17,7 +17,7 @@ import { StopDetail } from "./StopDetail";
 import { BookTab, MoneyTab, NotesTab } from "./TripTabs";
 import { Sheet } from "./Sheet";
 import { StopForm } from "./Forms";
-import { Back, Close } from "./icons";
+import { Back } from "./icons";
 
 const CARD_W = 380; // the stop card over the map on wide screens
 
@@ -106,7 +106,7 @@ export function TripScreen() {
         {trip.startDate ? dateRange(trip.startDate, trip.endDate) : "No dates yet"}
         {others && ` · ${others}`}
       </p>
-      <div role="tablist" aria-label="Trip" className="mt-3 grid rounded-xl bg-soft p-0.5" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+      <div role="tablist" aria-label="Trip" className="mt-3 grid max-w-[440px] rounded-xl bg-soft p-0.5" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
         {tabs.map((t) => (
           <button
             key={t}
@@ -135,7 +135,7 @@ export function TripScreen() {
         routes={routes}
         selectedId={openStop?.id}
         onSelect={open}
-        padding={{ top: 80, bottom: sheetPx + 24, left: 40, right: card ? CARD_W + 48 : 40 }}
+        padding={{ top: 80, bottom: sheetPx + 24, left: card ? CARD_W + 40 : 40, right: 40 }}
         className="absolute inset-0 min-[900px]:left-1/2"
         label={`Map of ${day ? day.title || day.date : trip.name}`}
       />
@@ -186,25 +186,21 @@ export function TripScreen() {
       </BottomSheet>
 
       {card && openStop && (
+        // Docked against the plan, at the seam with the map: list, then the stop, then where it is.
+        // As tall as the stop needs, scrolling only past the screen.
         <aside
           aria-label="Stop"
           style={{ width: CARD_W }}
-          className="absolute top-4 right-4 bottom-4 z-30 flex flex-col overflow-hidden rounded-[22px] bg-card shadow-[var(--shadow-float)] [animation:card-in_220ms_cubic-bezier(.2,.9,.25,1)]"
+          className="absolute top-4 left-[calc(50%+4px)] z-30 flex max-h-[calc(100%-32px)] flex-col overflow-hidden rounded-[22px] bg-card shadow-[var(--shadow-float)] [animation:card-in_220ms_cubic-bezier(.2,.9,.25,1)]"
         >
-          <button
-            onClick={() => window.history.back()}
-            aria-label="Close stop"
-            className="press absolute top-3 right-3 z-10 flex size-8 items-center justify-center rounded-full bg-soft text-ink-2"
-          >
-            <Close size={16} />
-          </button>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-5 pr-8">
+          <div className="min-h-0 overflow-y-auto overscroll-contain pt-5">
             <StopDetail
               key={openStop.id}
               trip={trip}
               stop={openStop}
               number={numbers.get(openStop.id)}
               booking={openStop.bookingId ? trip.bookings.find((b) => b.id === openStop.bookingId) : undefined}
+              onClose={() => window.history.back()}
               onShift={(time) => editStop(trip.id, openStop.id, { time })}
               onPick={(pickedOptionId) => editStop(trip.id, openStop.id, { pickedOptionId })}
               onEdit={() => setModal({ kind: "stop-form", stopId: openStop.id })}

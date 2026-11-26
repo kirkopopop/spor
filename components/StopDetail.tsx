@@ -2,7 +2,7 @@
 
 import type { Booking, Stop, Trip } from "@/lib/types";
 import { clockTime, leaveBy, mapsSearch, MODE_LABEL, shiftTime, showTime, travelMinutes } from "@/lib/format";
-import { Back, Check, Directions, Mode, NoteIcon } from "./icons";
+import { Back, Check, Close, Directions, Mode, NoteIcon } from "./icons";
 import { RichText } from "./RichText";
 import { NoteForm } from "./Forms";
 import { NoteItem } from "./TripTabs";
@@ -14,6 +14,7 @@ export function StopDetail({
   number,
   booking,
   onBack,
+  onClose,
   onShift,
   onPick,
   onEdit,
@@ -23,6 +24,7 @@ export function StopDetail({
   number?: number;
   booking?: Booking;
   onBack?: () => void;
+  onClose?: () => void;
   onShift: (time: string) => void;
   onPick: (optionId: string) => void;
   onEdit: () => void;
@@ -37,7 +39,7 @@ export function StopDetail({
   const fixed = stop.kind === "fixed";
 
   return (
-    <article className="px-5 pb-8 [animation:fade-in_180ms_ease-out]">
+    <article className={`px-5 [animation:fade-in_180ms_ease-out] ${onClose ? "pb-5" : "pb-8"}`}>
       {onBack && (
         <button onClick={onBack} className="press -ml-1 mb-2 inline-flex items-center gap-1 py-1 text-[15px] font-medium text-accent">
           <Back size={17} />
@@ -54,7 +56,7 @@ export function StopDetail({
             {number}
           </span>
         )}
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h3 className="text-[24px] leading-tight font-bold tracking-[-0.02em] text-balance">{stop.name}</h3>
           <p className="tnum mt-1 text-[15px]">
             <span className={fixed ? "font-semibold text-fixed" : "text-ink-2"}>{showTime(stop)}</span>
@@ -65,6 +67,15 @@ export function StopDetail({
             </span>
           </p>
         </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Close stop"
+            className="press -mr-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-soft text-ink-2 hover:text-ink"
+          >
+            <Close size={16} />
+          </button>
+        )}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2 text-[13px]">

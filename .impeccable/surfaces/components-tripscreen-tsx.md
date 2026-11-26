@@ -31,7 +31,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
 - "Ask Claude" is a chip on each day (beside "If it rains") instead of a floating control: the link prefills that day's context, which a screen-level control can't know. Overview carries "Plan with Claude" for the next trip.
 - The sheet opens at ~56% of the screen, not ~45%: PRODUCT.md puts the plan high on the first screen and the user named "plan hidden" as what would feel wrong; the map still owns the top.
-- At ≥900px the sheet becomes a left side panel with the back control in its header (contract scope: "also works at desktop width").
+- At ≥900px the sheet becomes the left half with the back control in its header, the map the right half; a tapped stop docks as a card against the plan, at the seam with the map (the user asked for this split and placement).
 - Stop order is drawn as quiet dashed connectors (not real paths); only the leg into the open or next stop is solid. Overlapping pins merge into one marker naming their stops ("2–7").
 - Trips with no stops yet have no coordinates, so they can't appear on the Overview map until Claude adds stops.
 

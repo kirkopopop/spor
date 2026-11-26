@@ -29,8 +29,9 @@ export function DayPlan({
   const bookings = new Map(trip.bookings.map((b) => [b.id, b]));
   const dayNotes = (trip.notes ?? []).filter((n) => n.dayId === day?.id);
 
+  // A container, not the viewport, decides the row shape: the same list is a phone sheet or a laptop panel.
   return (
-    <div className="pb-6">
+    <div className="@container pb-6">
       {trip.days.length > 0 && (
         <div className="sticky top-0 z-10 bg-card/95 px-5 pt-1 pb-3 backdrop-blur" role="tablist" aria-label="Days">
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 [scrollbar-width:none]">
@@ -79,10 +80,14 @@ export function DayPlan({
           {day.stops.length === 0 ? (
             <p className="mt-6 text-[15px] text-muted">None yet.</p>
           ) : (
-            <ol className="mt-4">
+            <ol className="mt-4 @min-[560px]:mt-3 @min-[560px]:divide-y @min-[560px]:divide-divider">
               {day.stops.map((s, i) => (
                 <li key={s.id}>
-                  {s.go && <TravelLine stop={s} first={i === 0} />}
+                  {s.go && (
+                    <div className="@min-[560px]:hidden">
+                      <TravelLine stop={s} first={i === 0} />
+                    </div>
+                  )}
                   <StopRow stop={s} n={numbers.get(s.id) ?? i + 1} booking={s.bookingId ? bookings.get(s.bookingId) : undefined} selected={s.id === selectedId} onOpen={onOpen} />
                 </li>
               ))}
@@ -129,12 +134,20 @@ function StopRow({
   const fixed = stop.kind === "fixed";
   const optional = stop.kind === "optional";
   const picked = stop.options?.find((o) => o.id === stop.pickedOptionId);
+  const leave = stop.go && fixed ? leaveBy(stop) : undefined;
+  const status = booking?.status === "to_book" || stop.pickOne;
   return (
     <button
       onClick={() => onOpen(stop.id)}
       aria-current={selected || undefined}
-      className={`press -mx-2 flex w-[calc(100%+16px)] items-center gap-3.5 rounded-xl px-2 py-2.5 text-left transition-colors ${selected ? "bg-accent-soft" : ""}`}
+      className={`press -mx-2 flex w-[calc(100%+16px)] items-center gap-3.5 rounded-xl px-2 py-2.5 text-left transition-colors @min-[560px]:gap-3 @min-[560px]:py-2 ${
+        selected ? "bg-accent-soft" : "@min-[560px]:hover:bg-bg"
+      }`}
     >
+      {/* Wide: time leads the row, like an itinerary. */}
+      <span className={`tnum hidden w-12 shrink-0 text-[14px] @min-[560px]:block ${fixed ? "font-semibold text-fixed" : "text-ink-2"}`}>
+        {showTime(stop)}
+      </span>
       <span
         className={`tnum flex size-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${
           stop.doneAt ? "bg-ok text-white" : fixed ? "bg-fixed-soft text-fixed" : "bg-accent-soft text-accent-ink"
@@ -147,12 +160,26 @@ function StopRow({
           {stop.name}
           {booking?.status === "booked" && <Check size={15} className="ml-1.5 inline-block align-[-2px] text-ok" aria-label="Booked" />}
         </span>
-        <span className="tnum mt-0.5 block text-[14px]">
-          <span className={fixed ? "font-semibold text-fixed" : "text-muted"}>{showTime(stop)}</span>
-          {booking?.status === "to_book" && <span className="ml-2 font-semibold text-fixed">To book</span>}
-          {stop.pickOne && (picked ? <span className="ml-2 text-ink-2">{picked.name}</span> : <span className="ml-2 font-semibold text-accent">Pick one</span>)}
+        <span className={`tnum mt-0.5 block text-[14px] ${status ? "" : "@min-[560px]:hidden"}`}>
+          <span className={`@min-[560px]:hidden ${fixed ? "font-semibold text-fixed" : "text-muted"}`}>{showTime(stop)}</span>
+          {booking?.status === "to_book" && <span className="ml-2 font-semibold text-fixed @min-[560px]:ml-0">To book</span>}
+          {stop.pickOne &&
+            (picked ? (
+              <span className="ml-2 text-ink-2 @min-[560px]:ml-0">{picked.name}</span>
+            ) : (
+              <span className="ml-2 font-semibold text-accent @min-[560px]:ml-0">Pick one</span>
+            ))}
         </span>
       </span>
+      {/* Wide: how you get here, in its own column instead of a line between rows. */}
+      {stop.go && (
+        <span className="tnum hidden shrink-0 items-center gap-1.5 text-[13px] text-muted @min-[560px]:flex">
+          <Mode mode={stop.go.mode} size={15} />
+          {stop.go.est ? "~" : ""}
+          {travelMinutes(stop.go.min)}
+          {leave && <span className="font-medium text-fixed">· leave {clockTime(leave)}</span>}
+        </span>
+      )}
     </button>
   );
 }
