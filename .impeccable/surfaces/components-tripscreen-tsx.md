@@ -7,7 +7,7 @@ related_targets: ["components/HomeScreen.tsx","app/settings/page.tsx","app/trips
 
 ## Scope
 
-The whole spor app shell and its main surfaces: Overview, Trips, a trip (map + sheet, with Plan / Bookings / Money / Notes, and Today during a trip), Settings. Mode: Operate. Phone-first PWA; also works at desktop width.
+The whole tur app shell and its main surfaces: Overview, Trips, a trip (map + sheet, with Plan / Bookings / Money / Notes, and Today during a trip), Settings. Mode: Operate. Phone-first PWA; also works at desktop width.
 
 ## Audience and job
 

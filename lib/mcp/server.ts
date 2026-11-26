@@ -5,7 +5,7 @@ import * as z from "zod";
 import { rowsToTrip, TRIP_SELECT, type TripRow } from "@/lib/db";
 import { validateDays, validateStops, type TripContext } from "./validate";
 
-// spor's tools for Claude. Every call runs as the signed-in person through RLS,
+// tur's tools for Claude. Every call runs as the signed-in person through RLS,
 // so Claude sees and changes exactly what they could in the app. Writes are
 // checked first and logged, so the app (and Claude next time) can see what changed.
 
@@ -16,7 +16,7 @@ const travel = z.object({
   mode: z.enum(["walk", "tube", "train", "bus", "taxi", "bike", "plane", "car"]),
   min: z.number().int().min(1),
   text: z.string().optional().describe("How to get here, e.g. 'U3 Marienplatz → Odeonsplatz, then 5 min on foot'"),
-  leave: TIME.optional().describe("Explicit leave-by; otherwise spor computes it (with 15 min slack before fixed stops)"),
+  leave: TIME.optional().describe("Explicit leave-by; otherwise tur computes it (with 15 min slack before fixed stops)"),
   est: z.boolean().optional().describe("true if the minutes are a guess"),
 });
 
@@ -52,7 +52,7 @@ const fail = (errors: string[]) => ({
 });
 
 export function buildServer(sb: SupabaseClient, userId: string) {
-  const server = new McpServer({ name: "spor", version: "1.0.0" });
+  const server = new McpServer({ name: "tur", version: "1.0.0" });
 
   /**
    * Loads what the checks need and refuses a stale write: if anything in the trip
@@ -399,7 +399,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
     {
       title: "Add a note",
       description:
-        "Leave a short note on the trip, a day or a stop, shown to the travellers in spor. Use it to answer their notes (\"Moved the museum to Wednesday as you asked\") or flag something to decide. Keep it to one or two sentences.",
+        "Leave a short note on the trip, a day or a stop, shown to the travellers in tur. Use it to answer their notes (\"Moved the museum to Wednesday as you asked\") or flag something to decide. Keep it to one or two sentences.",
       inputSchema: {
         trip_id: z.string().uuid(),
         expected_revision: REVISION,

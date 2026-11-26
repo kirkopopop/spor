@@ -50,7 +50,7 @@ export default function Consent() {
 
   return (
     <main className="flex flex-1 flex-col justify-center px-6 pb-24">
-      <h1 className="text-[40px] font-bold tracking-[-0.03em]">spor</h1>
+      <h1 className="text-[40px] font-bold tracking-[-0.03em]">tur</h1>
       {state.kind === "error" && <p className="mt-6 text-[15px] text-ink-2">Link expired. Try again from Claude.</p>}
       {(state.kind === "loading" || state.kind === "busy") && <div className="mt-6 h-24" aria-busy="true" />}
       {state.kind === "ask" && (

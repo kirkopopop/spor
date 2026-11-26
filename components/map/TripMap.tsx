@@ -83,7 +83,7 @@ export function TripMap({
       const ready = () => !cancelled && setReadyGen(built);
       m.on("load", ready);
       m.on("error", ready); // offline: still draw what we have
-      if (process.env.NODE_ENV !== "production") (window as unknown as { __sporMap?: MlMap }).__sporMap = m; // dev inspection
+      if (process.env.NODE_ENV !== "production") (window as unknown as { __turMap?: MlMap }).__turMap = m; // dev inspection
     })();
     return () => {
       cancelled = true;
@@ -109,42 +109,42 @@ export function TripMap({
           geometry: { type: "LineString" as const, coordinates: r.points.map(([lat, lng]) => [lng, lat]) },
         })),
     };
-    const src = m.getSource("spor-routes") as { setData?: (d: unknown) => void } | undefined;
+    const src = m.getSource("tur-routes") as { setData?: (d: unknown) => void } | undefined;
     if (src?.setData) {
       src.setData(data); // returns the source; an effect may only return a cleanup
       return;
     }
     const line = { "line-join": "round", "line-cap": "round" } as const;
     try {
-      m.addSource("spor-routes", { type: "geojson", data });
+      m.addSource("tur-routes", { type: "geojson", data });
       m.addLayer({
-        id: "spor-routes-dashed",
+        id: "tur-routes-dashed",
         type: "line",
-        source: "spor-routes",
+        source: "tur-routes",
         filter: ["==", ["get", "kind"], KIND.dashed],
         layout: line,
         paint: { "line-color": ["get", "color"], "line-width": 2, "line-opacity": 0.5, "line-dasharray": [1.5, 2] },
       });
       m.addLayer({
-        id: "spor-routes-path",
+        id: "tur-routes-path",
         type: "line",
-        source: "spor-routes",
+        source: "tur-routes",
         filter: ["==", ["get", "kind"], KIND.path],
         layout: line,
         paint: { "line-color": ["get", "color"], "line-width": 2.5, "line-opacity": 0.55 },
       });
       m.addLayer({
-        id: "spor-routes-casing",
+        id: "tur-routes-casing",
         type: "line",
-        source: "spor-routes",
+        source: "tur-routes",
         filter: ["==", ["get", "kind"], KIND.solid],
         layout: line,
         paint: { "line-color": token("card"), "line-width": 6, "line-opacity": 0.9 },
       });
       m.addLayer({
-        id: "spor-routes",
+        id: "tur-routes",
         type: "line",
-        source: "spor-routes",
+        source: "tur-routes",
         filter: ["==", ["get", "kind"], KIND.solid],
         layout: line,
         paint: { "line-color": ["get", "color"], "line-width": 3 },

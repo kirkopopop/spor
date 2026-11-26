@@ -1,7 +1,7 @@
-# spor
+# tur
 
 One private app to plan and run our trips. Claude writes the plan in; the app shows it and runs it on the day.
-Design and decisions: [docs/superpowers/specs/2026-11-25-spor-design.md](docs/superpowers/specs/2026-11-25-spor-design.md).
+Design and decisions: [docs/superpowers/specs/2026-11-25-tur-design.md](docs/superpowers/specs/2026-11-25-tur-design.md).
 
 ## Run
 
@@ -28,7 +28,7 @@ Without Supabase settings the app runs in dev on the trips in `data/seed/*.json`
 
 ## Claude connector
 
-claude.ai writes plans into spor through the MCP endpoint `https://spor-pi.vercel.app/api/mcp`.
+claude.ai writes plans into tur through the MCP endpoint `https://spor-pi.vercel.app/api/mcp`.
 Supabase Auth is the OAuth server; tools run as the signed-in person, so RLS applies.
 
 1. Supabase → Authentication → URL Configuration: Site URL `https://spor-pi.vercel.app`;
@@ -40,8 +40,8 @@ Supabase Auth is the OAuth server; tools run as the signed-in person, so RLS app
 Tools: `list_trips`, `get_trip`, `get_activity_since`, `create_trip`, `update_trip`, `upsert_days`,
 `upsert_stops`, `delete_stops`, `upsert_bookings`, `set_budget`, `upsert_spare_ideas`, `add_note`.
 Every write passes the `expected_revision` it last read; if anyone changed the trip since, the write is
-refused and Claude re-reads first. The skill Claude follows is in `skills/spor-planning/`
-(zip it as `spor-planning/SKILL.md` to upload to claude.ai).
+refused and Claude re-reads first. The skill Claude follows is in `skills/tur-planning/`
+(zip it as `tur-planning/SKILL.md` to upload to claude.ai).
 
 ## Live view
 

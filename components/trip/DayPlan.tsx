@@ -67,7 +67,7 @@ export function DayPlan({
               </button>
             )}
             <a
-              href={`https://claude.ai/new?q=${encodeURIComponent(`In spor, look at ${trip.name} on ${dayTab(day.date)} (${day.date}${day.title ? `, "${day.title}"` : ""}). `)}`}
+              href={`https://claude.ai/new?q=${encodeURIComponent(`In tur, look at ${trip.name} on ${dayTab(day.date)} (${day.date}${day.title ? `, "${day.title}"` : ""}). `)}`}
               target="_blank"
               rel="noreferrer"
               className="press inline-flex items-center gap-1.5 rounded-full bg-soft px-3 py-1.5 text-[14px] text-ink-2"

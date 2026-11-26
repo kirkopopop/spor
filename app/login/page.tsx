@@ -66,7 +66,7 @@ export default function Login() {
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgb(0_0_0/0.45),transparent_28%,transparent_52%,rgb(0_0_0/0.55))]" />
         <div className="absolute top-[max(20px,env(safe-area-inset-top))] left-5 flex items-center gap-2.5 min-[900px]:top-7 min-[900px]:left-7">
           <Mark />
-          <span className="text-[22px] font-bold tracking-[-0.03em] text-white">spor</span>
+          <span className="text-[22px] font-bold tracking-[-0.03em] text-white">tur</span>
         </div>
         <p className="absolute right-5 bottom-[calc(min(46dvh,420px)+16px)] left-5 text-[34px] leading-[1.08] font-bold tracking-[-0.03em] text-balance text-white [text-shadow:0_1px_12px_rgb(0_0_0/0.35)] min-[900px]:right-auto min-[900px]:bottom-9 min-[900px]:left-8 min-[900px]:max-w-[13ch] min-[900px]:text-[48px] [animation:rise_700ms_200ms_cubic-bezier(.16,1,.3,1)_both]">
           Trips, planned and lived.

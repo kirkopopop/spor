@@ -4,7 +4,7 @@ import { useCallback, useSyncExternalStore } from "react";
 
 // Screen state kept in the address bar without a server round trip:
 // `push` adds a history entry (Back undoes it), `replace` does not.
-const EVENT = "spor:url";
+const EVENT = "tur:url";
 
 function subscribe(cb: () => void) {
   window.addEventListener("popstate", cb);

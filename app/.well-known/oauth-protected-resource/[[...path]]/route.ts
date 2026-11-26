@@ -1,6 +1,6 @@
 import { AUTH_ISSUER, MCP_PATH } from "@/lib/mcp/auth";
 
-// RFC 9728: tells claude.ai that spor's MCP endpoint is protected and that
+// RFC 9728: tells claude.ai that tur's MCP endpoint is protected and that
 // Supabase Auth is where to sign in. Served at the root and at /<resource path>.
 export function GET(req: Request) {
   const origin = new URL(req.url).origin;

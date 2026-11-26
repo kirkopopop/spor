@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-11-26T10:20:30.909Z",
-  "title": "Design System: spor",
+  "title": "Design System: tur",
   "extensions": {
     "colorMeta": {
       "bg": {
@@ -544,7 +544,7 @@
   ],
   "narrative": {
     "northStar": "The Category Standard, Played Straight",
-    "overview": "spor looks like the travel app you already know how to use, built with the care of the best of them. A real vector map owns the top of a trip; the plan sits in a white sheet over it that drags between three heights, the way Apple Maps does places and Airbnb does trips. Between trips the app is a calm iOS-style grouped list on a light grey ground, with one big number (the countdown) the way Oura shows a score. Nothing is invented for its own sake: familiar conventions, executed at full fidelity.\n\nThe system is quiet so the plan can be read in the street, one-handed, in sun. One blue carries the route, the selection and the primary action. Burnt orange marks fixed times and things still to book; green marks what is done or booked. Status is carried by these tones and by fill, not by words. Type is the device's own UI face, set with tight negative tracking on titles and tabular figures on every time and number, so columns of times line up.\n\nDensity is calm, not sparse: one line per stop with its time beneath, detail behind a tap. The map and the list share one numbering: stop 3 in the timeline is pin 3 on the map. The user's confirmed rejection is an invented visual world; the app has none.",
+    "overview": "tur looks like the travel app you already know how to use, built with the care of the best of them. A real vector map owns the top of a trip; the plan sits in a white sheet over it that drags between three heights, the way Apple Maps does places and Airbnb does trips. Between trips the app is a calm iOS-style grouped list on a light grey ground, with one big number (the countdown) the way Oura shows a score. Nothing is invented for its own sake: familiar conventions, executed at full fidelity.\n\nThe system is quiet so the plan can be read in the street, one-handed, in sun. One blue carries the route, the selection and the primary action. Burnt orange marks fixed times and things still to book; green marks what is done or booked. Status is carried by these tones and by fill, not by words. Type is the device's own UI face, set with tight negative tracking on titles and tabular figures on every time and number, so columns of times line up.\n\nDensity is calm, not sparse: one line per stop with its time beneath, detail behind a tap. The map and the list share one numbering: stop 3 in the timeline is pin 3 on the map. The user's confirmed rejection is an invented visual world; the app has none.",
     "keyCharacteristics": [
       "A full-bleed map on top, the plan in a draggable sheet (peek 30%, half 56%, full 92%); the plan as the left half at 900px and wider, map the right half; an open stop docks as a 380px card against the plan at the seam with the map, as tall as its content; at panel widths of 560px+ stop rows read as an itinerary (time, number, stop, travel in its own column).",
       "Light grouped ground (#f5f6f8), white sheets and grouped lists, ink text, one blue accent.",

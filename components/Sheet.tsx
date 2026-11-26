@@ -30,7 +30,7 @@ export function Sheet({
   // Back closes the sheet; closing by tap pops the entry we pushed.
   useEffect(() => {
     if (!open) return;
-    window.history.pushState({ ...window.history.state, sporSheet: true }, "");
+    window.history.pushState({ ...window.history.state, turSheet: true }, "");
     const onPop = () => onCloseRef.current();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && window.history.back();
     window.addEventListener("popstate", onPop);
@@ -45,7 +45,7 @@ export function Sheet({
   }, [open]);
 
   const close = () => {
-    if (window.history.state?.sporSheet) window.history.back();
+    if (window.history.state?.turSheet) window.history.back();
     else onCloseRef.current();
   };
 

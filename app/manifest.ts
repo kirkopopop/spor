@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "spor",
-    short_name: "spor",
+    name: "tur",
+    short_name: "tur",
     description: "Trips, planned and lived.",
     start_url: "/",
     display: "standalone",

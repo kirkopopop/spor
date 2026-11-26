@@ -56,7 +56,7 @@ export function HomeScreen() {
           aria-label="Settings"
           className="press mb-1.5 flex size-9 items-center justify-center rounded-full bg-ink text-[15px] font-semibold text-on-ink"
         >
-          {(myName ?? "spor")[0].toUpperCase()}
+          {(myName ?? "tur")[0].toUpperCase()}
         </Link>
       }
     >
@@ -130,7 +130,7 @@ function NextTrip({ trip, live, myName }: { trip: Trip; live: boolean; myName?: 
       <div className="flex flex-wrap gap-2 border-t border-divider px-5 py-3.5">
         {empty ? (
           <a
-            href={`https://claude.ai/new?q=${encodeURIComponent(`Let's plan ${trip.name} in spor (${trip.startDate} to ${trip.endDate}, ${trip.people.join(", ")}).`)}`}
+            href={`https://claude.ai/new?q=${encodeURIComponent(`Let's plan ${trip.name} in tur (${trip.startDate} to ${trip.endDate}, ${trip.people.join(", ")}).`)}`}
             target="_blank"
             rel="noreferrer"
             className="press inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-[15px] font-semibold text-on-fill"
@@ -160,7 +160,7 @@ function EmptyNext() {
       <div className="p-5">
         <h2 className="text-[20px] font-bold tracking-[-0.02em]">No trip coming up</h2>
         <a
-          href={`https://claude.ai/new?q=${encodeURIComponent("Let's plan a new trip in spor.")}`}
+          href={`https://claude.ai/new?q=${encodeURIComponent("Let's plan a new trip in tur.")}`}
           target="_blank"
           rel="noreferrer"
           className="press mt-3 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-[15px] font-semibold text-on-fill"

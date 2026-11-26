@@ -1,5 +1,5 @@
 // The home-screen mark: a route with two stops, the blue of the app's routes.
-export function SporMark({ size }: { size: number }) {
+export function TurMark({ size }: { size: number }) {
   const s = size / 100;
   return (
     <div style={{ width: size, height: size, background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center" }}>

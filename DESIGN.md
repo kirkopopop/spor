@@ -1,5 +1,5 @@
 ---
-name: spor
+name: tur
 description: Trips, planned and lived. The category standard for travel apps, played straight: a real map on top, the plan in a sheet over it.
 colors:
   bg: "#f5f6f8"
@@ -240,13 +240,13 @@ components:
     padding: "12px 20px 28px"
 ---
 
-# Design System: spor
+# Design System: tur
 
 ## Overview
 
 **Creative North Star: "The Category Standard, Played Straight"**
 
-spor looks like the travel app you already know how to use, built with the care of the best of them. A real vector map owns the top of a trip; the plan sits in a white sheet over it that drags between three heights, the way Apple Maps does places and Airbnb does trips. Between trips the app is a calm iOS-style grouped list on a light grey ground, with one big number (the countdown) the way Oura shows a score. Nothing is invented for its own sake: familiar conventions, executed at full fidelity.
+tur looks like the travel app you already know how to use, built with the care of the best of them. A real vector map owns the top of a trip; the plan sits in a white sheet over it that drags between three heights, the way Apple Maps does places and Airbnb does trips. Between trips the app is a calm iOS-style grouped list on a light grey ground, with one big number (the countdown) the way Oura shows a score. Nothing is invented for its own sake: familiar conventions, executed at full fidelity.
 
 The system is quiet so the plan can be read in the street, one-handed, in sun. One blue carries the route, the selection and the primary action. Burnt orange marks fixed times and things still to book; green marks what is done or booked. Status is carried by these tones and by fill, not by words. Type is the device's own UI face, set with tight negative tracking on titles and tabular figures on every time and number, so columns of times line up.
 
@@ -306,7 +306,7 @@ A cool, near-neutral grey family on white, with one saturated blue and two statu
 **Body Font:** the same stack
 **Label/Mono Font:** the same stack; tabular figures (`tnum`) stand in for a mono face wherever times and amounts align
 
-**Character:** The device's own voice. SF on an iPhone makes spor feel native; Inter elsewhere keeps the same proportions. Titles are bold with tight negative tracking; everything else is regular or medium, and contextual alternates (`cv11`, `ss01`) are on globally.
+**Character:** The device's own voice. SF on an iPhone makes tur feel native; Inter elsewhere keeps the same proportions. Titles are bold with tight negative tracking; everything else is regular or medium, and contextual alternates (`cv11`, `ss01`) are on globally.
 
 ### Hierarchy
 - **Display** (600, 52px, line-height 1, -0.03em, tabular): the one big number: the countdown to the next trip on Overview.

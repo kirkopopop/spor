@@ -1,6 +1,6 @@
-// spor service worker: keeps the app's pages and code on the phone so it opens
+// tur service worker: keeps the app's pages and code on the phone so it opens
 // without signal. Trip data itself lives in IndexedDB (lib/store.ts), not here.
-const VERSION = "spor-v1";
+const VERSION = "tur-v1";
 const SHELL = `${VERSION}-shell`;
 const STATIC = `${VERSION}-static`;
 

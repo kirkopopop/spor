@@ -2,7 +2,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { authenticate } from "@/lib/mcp/auth";
 import { buildServer } from "@/lib/mcp/server";
 
-// spor's MCP endpoint for claude.ai (streamable HTTP, stateless: one server per request,
+// tur's MCP endpoint for claude.ai (streamable HTTP, stateless: one server per request,
 // which suits serverless). Each request carries Claude's OAuth token for the person.
 async function handle(req: Request) {
   const auth = await authenticate(req);

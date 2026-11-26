@@ -111,7 +111,7 @@ export function Globe({
       });
       map.current = m;
       setGen((g) => (built = g + 1));
-      if (process.env.NODE_ENV !== "production") (window as unknown as { __sporGlobe?: MlMap }).__sporGlobe = m; // dev inspection
+      if (process.env.NODE_ENV !== "production") (window as unknown as { __turGlobe?: MlMap }).__turGlobe = m; // dev inspection
     })();
     return () => {
       cancelled = true;

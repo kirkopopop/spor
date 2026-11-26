@@ -12,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "spor",
+  title: "tur",
   description: "Trips, planned and lived.",
-  appleWebApp: { capable: true, title: "spor", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "tur", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

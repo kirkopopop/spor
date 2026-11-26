@@ -279,8 +279,8 @@ export function SettingsScreen() {
             <h3 className="text-[22px] font-bold tracking-[-0.02em]">Connect Claude</h3>
             <ol className="flex list-decimal flex-col gap-2.5 pl-5 text-[16px] leading-relaxed text-ink-2">
               <li>In claude.ai, open Settings → Connectors.</li>
-              <li>Add custom connector, name it spor, and paste the connector address.</li>
-              <li>Sign in with your spor email and tap Allow.</li>
+              <li>Add custom connector, name it tur, and paste the connector address.</li>
+              <li>Sign in with your tur email and tap Allow.</li>
             </ol>
             <p className="text-[15px] text-muted">Everyone in the household connects their own Claude.</p>
           </div>

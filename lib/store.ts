@@ -36,6 +36,7 @@ const DEFAULT_PREFS: Prefs = { timeFormat: "24h", homeCurrency: "EUR", theme: "s
 const EMPTY: State = { loaded: false, online: true, snapshots: [], outbox: [], members: [], prefs: DEFAULT_PREFS };
 let state: State = EMPTY;
 const listeners = new Set<() => void>();
+// On-device store keys keep the app's original name (spor) so a rename never wipes the phones' cache.
 const idb = typeof indexedDB === "undefined" ? undefined : createStore("spor", "kv");
 
 function setState(next: Partial<State>) {
@@ -65,7 +66,7 @@ async function pushOps(ops: Op[]): Promise<string[]> {
   for (const op of ops) {
     const { error } = await supabase().rpc("apply_op", opToRpc(op));
     if (error && !error.code) break; // no answer from the server: offline or flaky
-    if (error) console.warn("spor: edit refused and dropped", op, error.message);
+    if (error) console.warn("tur: edit refused and dropped", op, error.message);
     done.push(op.id);
   }
   return done;
@@ -86,7 +87,7 @@ function listenForChanges() {
     clearTimeout(timer);
     timer = setTimeout(sync, 400);
   };
-  const channel = supabase().channel("spor-trips");
+  const channel = supabase().channel("tur-trips");
   for (const table of ["trips", "days", "stops", "bookings", "expenses", "notes", "budget_lines", "spare_ideas"]) {
     channel.on("postgres_changes", { event: "*", schema: "public", table }, later);
   }

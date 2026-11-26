@@ -23,7 +23,7 @@ export function applyTheme(pref: ThemePref) {
   } catch {
     // Private mode: still apply for this visit.
   }
-  const apply = (window as unknown as { __sporTheme?: () => void }).__sporTheme;
+  const apply = (window as unknown as { __turTheme?: () => void }).__turTheme;
   if (apply) apply();
   else document.documentElement.dataset.theme = pref === "dark" || (pref === "system" && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
 }

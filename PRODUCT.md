@@ -19,15 +19,15 @@ Two situations:
 
 ## Product Purpose
 
-One private place where every trip lives and runs: plan in conversation with Claude, then read, adjust and run the plan in spor on both phones. Success: the plan is trustworthy on the day (correct leave-by times, works offline, both phones in step), and planning a trip with Claude ends with it already on both phones.
+One private place where every trip lives and runs: plan in conversation with Claude, then read, adjust and run the plan in tur on both phones. Success: the plan is trustworthy on the day (correct leave-by times, works offline, both phones in step), and planning a trip with Claude ends with it already on both phones.
 
 ## Positioning
 
-Planning happens in Claude, not in the app: spor is where the plan lives. Each traveller's own Claude reads and writes the trip through the spor connector (MCP), sees what the others changed (picks, ticks, notes, moved stops) and never overwrites them from a stale copy. The app itself has no AI chat; it is the calm, fast, offline-capable place to read, tweak and run the plan.
+Planning happens in Claude, not in the app: tur is where the plan lives. Each traveller's own Claude reads and writes the trip through the tur connector (MCP), sees what the others changed (picks, ticks, notes, moved stops) and never overwrites them from a stale copy. The app itself has no AI chat; it is the calm, fast, offline-capable place to read, tweak and run the plan.
 
 ## Operating Context
 
-- Places been: each person keeps the countries and cities they've visited, shown on the Overview globe (Me / Tanya / Both). Ended spor trips count automatically for the people on them; earlier travel is logged by hand in a few taps.
+- Places been: each person keeps the countries and cities they've visited, shown on the Overview globe (Me / Tanya / Both). Ended tur trips count automatically for the people on them; earlier travel is logged by hand in a few taps.
 - A trip moves through stages: Idea → Planning → Live → Memory. Memory is a recap tab on past trips (places reached, km on foot, spend, places not reached, the notes as a journal, the route as it happened); photos are not built yet.
 - Planning: day timeline with stops, travel between stops with leave-by times, "Pick one" options, bookings checklist, budget, rain plan per day, spare-time ideas per city, notes.
 - Live: Now/Next, tick stops, expenses split within the household, notes; offline with an edit queue that syncs.
@@ -44,7 +44,7 @@ Planning happens in Claude, not in the app: spor is where the plan lives. Each t
 
 ## Brand Commitments
 
-- Name: **spor** (Danish for track/trail), always lowercase; sits in a family of the user's apps (hjem, skarb, puls, ravn, kolo).
+- Name: **tur** (Danish for trip; renamed from spor in Nov 2026), always lowercase; sits in a family of the user's apps (hjem, skarb, puls, ravn, kolo).
 - Voice: plain, short, calm. No instruction copy on screen; empty states are two or three words ("None yet.", "All booked."). Don't say anything twice.
 - Status by styling, not words. The only status words: "To book", "Pick one" (or the picked option's name).
 - The list answers "what and when"; the detail sheet answers "how and what if". The plan sits high on the first screen.
@@ -61,7 +61,7 @@ Planning happens in Claude, not in the app: spor is where the plan lives. Each t
 ## Product Principles
 
 1. The plan must be right on the day: leave-by times, offline, both phones in step outrank everything else.
-2. Claude plans; spor holds and runs the plan. The app never grows its own planning assistant.
+2. Claude plans; tur holds and runs the plan. The app never grows its own planning assistant.
 3. Instant on a phone: everything reads from the phone's copy; the network only syncs.
 4. Nobody's edit is lost: travellers' changes win over stale copies, every change is attributed.
 5. Calm by default: one quiet line per stop, detail behind a tap, nothing nice-to-have above the plan.

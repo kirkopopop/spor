@@ -2,7 +2,7 @@ import vm from "node:vm";
 import { randomUUID } from "node:crypto";
 import type { Stage, Trip } from "./types";
 
-// Converts a UkTrip-format src/trip-data.js into a spor Trip. Node-only (vm);
+// Converts a UkTrip-format src/trip-data.js into a tur Trip. Node-only (vm);
 // used by scripts/import-uktrip.ts and tests, never shipped to the browser.
 
 type UkStop = {
@@ -23,7 +23,7 @@ type UkData = {
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-// UkTrip's `more` is small HTML; spor keeps **bold** and paragraphs only.
+// UkTrip's `more` is small HTML; tur keeps **bold** and paragraphs only.
 function htmlToText(html?: string) {
   if (!html) return undefined;
   return html
@@ -93,7 +93,7 @@ export function convertUkTrip(source: string, stage: Stage = "memory"): Trip {
       note: note || undefined,
       status: done || bookedChecks.has(id) ? ("booked" as const) : ("to_book" as const),
     })),
-    // UkTrip budgets are per person as [low, high]; spor plans the high end for everyone.
+    // UkTrip budgets are per person as [low, high]; tur plans the high end for everyone.
     budget: BUDGET.map(([label, cats, , high]) => ({ category: cats[0], label, planned: high * Math.max(1, people.length) })),
     spare: SPARE.map(([name, city, area, note, indoor, minutes, ll, q]) => ({
       id: slug(name),
