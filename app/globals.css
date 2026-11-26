@@ -183,6 +183,12 @@ button {
   backdrop-filter: blur(12px);
   overflow: hidden;
 }
+.maplibregl-ctrl-group button {
+  background-color: transparent !important;
+}
+.maplibregl-ctrl-group button:hover {
+  background-color: color-mix(in srgb, var(--color-ink) 6%, transparent) !important;
+}
 .maplibregl-ctrl-group button + button {
   border-top-color: var(--color-divider) !important;
 }

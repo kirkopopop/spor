@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { Map as MlMap, Marker } from "maplibre-gl";
+import type { ExpressionSpecification, GeoJSONSource, Map as MlMap, Marker } from "maplibre-gl";
 import type { Destination } from "@/lib/destination";
 import { token, useTheme } from "@/lib/theme";
 import { DestinationMark } from "../Destination";
 import type { MapRoute } from "./TripMap";
+
+/** Places been, for the globe: countries shaded by how many of the people shown have been, city dots. */
+export type GlobeBeen = { shading: Record<string, number>; people: number; cities: { lat: number; lng: number; name: string }[] };
 
 export type GlobePin = { id: string; lat: number; lng: number; destination: Destination; done: boolean; name: string };
 
@@ -29,6 +32,8 @@ export function Globe({
   selectedId,
   onSelect,
   focus,
+  been,
+  onCountryTap,
   className = "",
 }: {
   pins: GlobePin[];
@@ -36,6 +41,8 @@ export function Globe({
   selectedId?: string;
   onSelect: (id: string | undefined) => void;
   focus?: [number, number]; // where to face first: the next trip
+  been?: GlobeBeen; // shown when set
+  onCountryTap?: (iso: string, name: string) => void;
   className?: string;
 }) {
   const theme = useTheme();
@@ -46,8 +53,10 @@ export function Globe({
   const [faces, setFaces] = useState<{ id: string; el: HTMLElement }[]>([]);
   const touched = useRef(false); // the person has moved the globe: stop turning it for them
   const onSelectRef = useRef(onSelect);
+  const onCountryRef = useRef(onCountryTap);
   useEffect(() => {
     onSelectRef.current = onSelect;
+    onCountryRef.current = onCountryTap;
   });
 
   // Build the globe (again when the theme flips, for the matching style).
@@ -73,14 +82,17 @@ export function Globe({
         fadeDuration: 0,
       });
       m.touchZoomRotate.disableRotation();
-      m.addControl(new ml.NavigationControl({ showCompass: false }), "top-right");
+      // Zoom buttons for a mouse; on a phone, pinch does it and the buttons would crowd the filters.
+      if (matchMedia("(min-width: 640px)").matches) m.addControl(new ml.NavigationControl({ showCompass: false }), "top-right");
       m.addControl(new ml.AttributionControl({ compact: true }), "top-right");
       const stop = () => {
         touched.current = true;
       };
       m.on("mousedown", stop);
       m.on("touchstart", stop);
-      m.on("load", () => {
+      // style.load, not load: load waits until every visible tile is in at once, which a turning globe
+      // may never reach on a slow connection. The projection and our layers need only the style.
+      m.once("style.load", () => {
         if (cancelled) return;
         m.setProjection({ type: "globe" });
         // A thin atmosphere when the whole globe shows, gone as you zoom in.
@@ -166,6 +178,64 @@ export function Globe({
       // Offline: no style, no lines; the pins still show.
     }
   }, [gen, readyGen, routes]);
+
+  // Places been: countries filled under the labels, a dot per city. The outlines load the first time.
+  useEffect(() => {
+    const m = map.current;
+    if (!gen || readyGen !== gen || !m) return;
+    const show = been ? "visible" : "none";
+    if (!been) {
+      for (const id of ["been-fill", "been-line", "been-cities"]) if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", "none");
+      return;
+    }
+    let alive = true;
+    (async () => {
+      if (!m.getSource("been-countries")) {
+        const geo = (await import("@/assets/geo/countries-110m.json")).default;
+        if (!alive || m.getSource("been-countries")) return;
+        const firstLabel = m.getStyle().layers.find((l) => l.type === "symbol")?.id; // fill under the place names
+        try {
+          m.addSource("been-countries", { type: "geojson", data: geo as GeoJSON.FeatureCollection });
+          m.addLayer({ id: "been-fill", type: "fill", source: "been-countries", paint: { "fill-color": token("ok"), "fill-opacity": 0 } }, firstLabel);
+          m.addLayer({ id: "been-line", type: "line", source: "been-countries", paint: { "line-color": token("ok"), "line-width": 0.8, "line-opacity": 0 } }, firstLabel);
+          m.addSource("been-cities", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+          m.addLayer({
+            id: "been-cities",
+            type: "circle",
+            source: "been-cities",
+            paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 2.5, 5, 4.5], "circle-color": token("ok"), "circle-stroke-color": token("card"), "circle-stroke-width": 1.5 },
+          });
+          m.on("click", "been-fill", (e) => {
+            const p = e.features?.[0]?.properties as { iso?: string; name?: string } | undefined;
+            if (p?.iso && m.getLayoutProperty("been-fill", "visibility") !== "none") onCountryRef.current?.(p.iso, p.name ?? p.iso);
+          });
+        } catch {
+          return; // style gone (offline): nothing to shade on
+        }
+      }
+      // One person: a single shade. Several: deeper where more of them have been.
+      const codes = (n: number) => Object.keys(been.shading).filter((k) => been.shading[k] === n);
+      const all = Object.keys(been.shading);
+      const fill: unknown[] = ["match", ["get", "iso"]];
+      if (been.people > 1) {
+        const top = all.filter((k) => been.shading[k] >= been.people);
+        const some = all.filter((k) => been.shading[k] < been.people);
+        if (top.length) fill.push(top, 0.62);
+        if (some.length) fill.push(some, 0.28);
+      } else if (codes(1).length) fill.push(codes(1), 0.45);
+      fill.push(0);
+      m.setPaintProperty("been-fill", "fill-opacity", fill.length > 3 ? (fill as ExpressionSpecification) : 0);
+      m.setPaintProperty("been-line", "line-opacity", all.length ? ["match", ["get", "iso"], all, 0.7, 0] : 0);
+      m.getSource<GeoJSONSource>("been-cities")?.setData({
+        type: "FeatureCollection",
+        features: been.cities.map((c) => ({ type: "Feature", properties: { name: c.name }, geometry: { type: "Point", coordinates: [c.lng, c.lat] } })),
+      });
+      for (const id of ["been-fill", "been-line", "been-cities"]) m.setLayoutProperty(id, "visibility", show);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [gen, readyGen, been]);
 
   // Selecting a trip turns the globe to it and leans in; putting it down pulls back to the whole globe.
   const leaned = useRef(false);

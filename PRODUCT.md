@@ -27,6 +27,7 @@ Planning happens in Claude, not in the app: spor is where the plan lives. Each t
 
 ## Operating Context
 
+- Places been: each person keeps the countries and cities they've visited, shown on the Overview globe (Me / Tanya / Both). Ended spor trips count automatically for the people on them; earlier travel is logged by hand in a few taps.
 - A trip moves through stages: Idea → Planning → Live → Memory. Memory is a recap tab on past trips (places reached, km on foot, spend, places not reached, the notes as a journal, the route as it happened); photos are not built yet.
 - Planning: day timeline with stops, travel between stops with leave-by times, "Pick one" options, bookings checklist, budget, rain plan per day, spare-time ideas per city, notes.
 - Live: Now/Next, tick stops, expenses split within the household, notes; offline with an edit queue that syncs.

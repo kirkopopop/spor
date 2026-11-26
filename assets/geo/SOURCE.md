@@ -1,0 +1,7 @@
+# countries-110m.json
+
+Natural Earth 1:110m admin-0 countries (public domain), from
+https://github.com/nvkelso/natural-earth-vector/blob/master/geojson/ne_110m_admin_0_countries.geojson
+
+Slimmed for spor: properties reduced to `iso` (ISO_A2_EH, so France and Norway keep their codes)
+and `name`; coordinates rounded to 0.01°. Used to shade the countries you've been to on the globe.
