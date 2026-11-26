@@ -5,6 +5,8 @@ import { dayTab, money } from "@/lib/format";
 import { recap, recorded } from "@/lib/recap";
 import type { Leg } from "@/lib/walkLegs";
 import { Chevron } from "../icons";
+import { DestinationPhoto, LandmarkIcon } from "../Destination";
+import { destinationOf } from "@/lib/destination";
 import { NoteItem } from "../TripTabs";
 
 /**
@@ -20,8 +22,20 @@ export function Recap({ trip, legs, onDay }: { trip: Trip; legs: Map<string, Leg
     r.spent > 0 && `${money(r.spent, trip.currency)} spent${r.plannedSpend > 0 ? ` of ${money(r.plannedSpend, trip.currency)}` : ""}`,
   ].filter(Boolean);
 
+  const dest = destinationOf(trip);
+
   return (
     <div className="px-5 pb-8">
+      {dest.photo && (
+        <figure className="relative mb-5 h-[148px] overflow-hidden rounded-2xl bg-map">
+          <DestinationPhoto photo={dest.photo} sizes="(min-width: 900px) 640px, 100vw" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_top,rgb(0_0_0/0.5),transparent_60%)]" />
+          <figcaption className="absolute bottom-3 left-3.5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-white [text-shadow:0_1px_8px_rgb(0_0_0/0.4)]">
+            <LandmarkIcon landmark={dest.key} size={15} />
+            {dest.label}
+          </figcaption>
+        </figure>
+      )}
       <section className="flex items-end gap-4 pt-1">
         <div className="tnum text-[52px] leading-none font-semibold tracking-[-0.03em]">{r.visited}</div>
         <div className="pb-1 text-[15px] leading-snug">

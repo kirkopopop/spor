@@ -22,6 +22,8 @@ import { BookTab, MoneyTab, NotesTab } from "./TripTabs";
 import { Sheet } from "./Sheet";
 import { StopForm } from "./Forms";
 import { Back } from "./icons";
+import { DestinationMark } from "./Destination";
+import { destinationOf } from "@/lib/destination";
 
 const CARD_W = 380; // the stop card over the map on wide screens
 
@@ -123,6 +125,9 @@ export function TripScreen() {
         <Link href="/trips" aria-label="All trips" className="press -ml-1.5 hidden size-8 shrink-0 items-center justify-center rounded-full text-accent min-[900px]:flex">
           <Back size={20} />
         </Link>
+        <span className="mt-0.5 [animation:mark-in_420ms_cubic-bezier(.34,1.56,.64,1)_both]">
+          <DestinationMark destination={destinationOf(trip)} size={32} />
+        </span>
         <h1 className="line-clamp-2 text-[24px] leading-tight font-bold tracking-[-0.02em] text-balance">{trip.name}</h1>
       </div>
       <p className="mt-0.5 truncate text-[14px] text-muted">
