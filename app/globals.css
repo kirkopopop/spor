@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* `dark:` follows the app's own theme (data-theme on <html>), not just the system setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* spor: the category standard, played straight (see PRODUCT.md, standing visual preference).
    Light grouped ground, white sheets, one blue accent, system UI type. */
 @theme {
@@ -170,4 +173,19 @@ button {
 }
 .maplibregl-ctrl-attrib a {
   color: var(--color-muted) !important;
+}
+
+/* MapLibre's zoom buttons in the app's surfaces, light and dark. */
+.maplibregl-ctrl-group {
+  background: color-mix(in srgb, var(--color-card) 90%, transparent) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-float) !important;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--color-divider) !important;
+}
+.maplibregl-ctrl-group .maplibregl-ctrl-icon {
+  filter: var(--attrib-icon-filter, none);
 }

@@ -6,11 +6,11 @@ import journey from "@/assets/photos/journey.jpg";
 import { useMemo } from "react";
 import { useHousehold, useTrips } from "@/lib/store";
 import { dateRange, daysUntil, money, monthYear, openPicks, plannedTotal, todayIn, toBookCount } from "@/lib/format";
-import { groupTrips, tripRoutes } from "@/lib/tripView";
+import { groupTrips } from "@/lib/tripView";
 import type { Trip } from "@/lib/types";
 import { Group, Row, Screen } from "./shell/TabBar";
-import { TripMap } from "./map/TripMap";
-import { DestinationMark, DestinationPhoto, LandmarkIcon } from "./Destination";
+import { OverviewGlobe } from "./OverviewGlobe";
+import { DestinationMark, DestinationPhoto, LandmarkIcon, TripTile } from "./Destination";
 import { destinationOf } from "@/lib/destination";
 import { ChatIcon } from "./icons";
 
@@ -20,7 +20,6 @@ export function HomeScreen() {
   const { members, me } = useHousehold();
   const today = todayIn("Europe/Copenhagen");
   const groups = useMemo(() => groupTrips(trips, today), [trips, today]);
-  const routes = useMemo(() => tripRoutes(trips, today), [trips, today]);
   const myName = members.find((m) => m.userId === me)?.name;
 
   if (!loaded) return <div className="min-h-dvh" aria-busy="true" />;
@@ -45,24 +44,20 @@ export function HomeScreen() {
         </Link>
       }
     >
-      {routes.length > 0 && (
-        <div className="relative h-[220px] overflow-hidden rounded-[22px] shadow-[var(--shadow-card)]">
-          <TripMap
-            routes={routes}
-            interactive={false}
-            padding={{ top: 64, bottom: 40, left: 28, right: 28 }}
-            className="absolute inset-0"
-            label="Map of your trips"
-          />
-          {thisYear.length > 0 && (
-            <p className="absolute top-3 left-3 rounded-full bg-card/92 px-3 py-1.5 text-[13px] text-ink-2 shadow-[var(--shadow-float)] backdrop-blur">
+      <OverviewGlobe
+        trips={trips}
+        today={today}
+        focus={next}
+        stats={
+          thisYear.length > 0 && (
+            <p className="rounded-full bg-card/88 px-3 py-1.5 text-[13px] text-ink-2 shadow-[var(--shadow-float)] backdrop-blur-md">
               {year}: <b className="font-semibold text-ink">{thisYear.length}</b> {thisYear.length === 1 ? "trip" : "trips"} ·{" "}
               <b className="font-semibold text-ink">{daysAway}</b> days away · <b className="font-semibold text-ink">{cities}</b>{" "}
               {cities === 1 ? "city" : "cities"}
             </p>
-          )}
-        </div>
-      )}
+          )
+        }
+      />
 
       {next ? <NextTrip trip={next} live={groups.now.includes(next)} myName={myName} /> : <EmptyNext />}
 
@@ -202,17 +197,3 @@ export function TripGroup({ title, trips }: { title: string; trips: Trip[] }) {
   );
 }
 
-function TripTile({ trip }: { trip: Trip }) {
-  const dest = destinationOf(trip);
-  if (!dest.photo) return <DestinationMark destination={dest} size={48} />;
-  return (
-    <span className="relative size-12 shrink-0">
-      <span className="absolute inset-0 overflow-hidden rounded-[12px] bg-map">
-        <DestinationPhoto photo={dest.photo} sizes="48px" />
-      </span>
-      <span className="absolute -right-1.5 -bottom-1.5 rounded-[9px] ring-2 ring-card">
-        <DestinationMark destination={dest} size={22} />
-      </span>
-    </span>
-  );
-}

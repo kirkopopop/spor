@@ -1,6 +1,7 @@
 import Image, { type StaticImageData } from "next/image";
 import type { CSSProperties } from "react";
-import type { Destination, Landmark, Photo } from "@/lib/destination";
+import { destinationOf, type Destination, type Landmark, type Photo } from "@/lib/destination";
+import type { Trip } from "@/lib/types";
 import edinburgh from "@/assets/photos/edinburgh.jpg";
 import london from "@/assets/photos/london.jpg";
 import munich from "@/assets/photos/munich.jpg";
@@ -166,5 +167,21 @@ export function DestinationPhoto({ photo, sizes, eager, className = "" }: { phot
       style={{ objectFit: "cover", objectPosition: p.position }}
       className={className}
     />
+  );
+}
+
+/** A trip's tile in lists: its place's photo with the landmark as a corner badge, or the mark alone. */
+export function TripTile({ trip }: { trip: Trip }) {
+  const dest = destinationOf(trip);
+  if (!dest.photo) return <DestinationMark destination={dest} size={48} />;
+  return (
+    <span className="relative size-12 shrink-0">
+      <span className="absolute inset-0 overflow-hidden rounded-[12px] bg-map">
+        <DestinationPhoto photo={dest.photo} sizes="48px" />
+      </span>
+      <span className="absolute -right-1.5 -bottom-1.5 rounded-[9px] ring-2 ring-card">
+        <DestinationMark destination={dest} size={22} />
+      </span>
+    </span>
   );
 }

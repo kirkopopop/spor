@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { destinationOf } from "./destination";
+import { destinationOf, tripPlace } from "./destination";
 import type { Trip } from "./types";
 
 const trip = (name: string, cities: string[] = [], timezone = "Europe/Copenhagen"): Trip => ({
@@ -40,5 +40,27 @@ describe("destinationOf", () => {
   it("carries a photo only where one exists", () => {
     expect(destinationOf(trip("Munich")).photo).toBe("munich");
     expect(destinationOf(trip("Paris")).photo).toBeUndefined();
+  });
+});
+
+describe("where a trip sits on the globe", () => {
+  it("uses the destination's own centre, so a multi-city trip sits where it's named", () => {
+    const t = trip("London, Glasgow & Edinburgh");
+    t.days[0] = { id: "0", date: "2026-11-19", title: "", city: "london", place: "London", rain: [], stops: [{ id: "s", time: "08:00", name: "Gatwick", kind: "fixed", lat: 51.15, lng: -0.18 }] };
+    expect(tripPlace(t)).toEqual([51.5074, -0.1278]);
+  });
+
+  it("places a trip with no stops yet by its destination", () => {
+    expect(tripPlace(trip("Munich"))).toEqual([48.1372, 11.5756]);
+  });
+
+  it("falls back to the first stop on the map for a place without a known centre", () => {
+    const t = trip("Somewhere new", [], "UTC");
+    t.days = [{ id: "0", date: "2026-12-21", title: "", city: "", place: "", rain: [], stops: [{ id: "s", time: "09:00", name: "Hut", kind: "normal", lat: 61.2, lng: 7.1 }] }];
+    expect(tripPlace(t)).toEqual([61.2, 7.1]);
+  });
+
+  it("has nowhere to put a trip with neither", () => {
+    expect(tripPlace(trip("Somewhere new", [], "UTC"))).toBeUndefined();
   });
 });
