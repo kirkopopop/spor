@@ -49,7 +49,7 @@ export function StopDetail({
       <div className="flex items-start gap-3">
         {number != null && (
           <span
-            className={`tnum mt-1 flex size-8 shrink-0 items-center justify-center rounded-full text-[14px] font-semibold text-white ${
+            className={`tnum mt-1 flex size-8 shrink-0 items-center justify-center rounded-full text-[14px] font-semibold text-on-fill ${
               stop.doneAt ? "bg-ok" : fixed ? "bg-fixed" : "bg-accent"
             }`}
           >
@@ -130,7 +130,7 @@ export function StopDetail({
               const inner = (
                 <>
                   {stop.pickOne && (
-                    <span className={`mt-0.5 flex size-[22px] shrink-0 items-center justify-center rounded-full border-2 ${picked ? "border-accent bg-accent text-white" : "border-faint"}`}>
+                    <span className={`mt-0.5 flex size-[22px] shrink-0 items-center justify-center rounded-full border-2 ${picked ? "border-accent bg-accent text-on-fill" : "border-faint"}`}>
                       {picked && <Check size={12} />}
                     </span>
                   )}
@@ -179,7 +179,7 @@ export function StopDetail({
 
 function ActionButton({ children, label, onClick, href, primary }: { children: React.ReactNode; label: string; onClick?: () => void; href?: string; primary?: boolean }) {
   const cls = `press flex h-[60px] flex-col items-center justify-center gap-1 rounded-2xl text-[12px] font-medium ${
-    primary ? "bg-accent text-white" : "bg-soft text-ink"
+    primary ? "bg-accent text-on-fill" : "bg-soft text-ink"
   } ${!href && !onClick ? "opacity-40" : ""}`;
   if (href)
     return (

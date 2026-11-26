@@ -72,7 +72,7 @@ export function LiveView({
               {leaveAhead && <div className="tnum mt-1 text-[14px] font-medium text-fixed">Leave by {clockTime(leave!)}</div>}
             </button>
             {maps && (
-              <a href={maps} target="_blank" rel="noreferrer" aria-label={`Directions to ${next.name}`} className="press flex size-12 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-[var(--shadow-float)]">
+              <a href={maps} target="_blank" rel="noreferrer" aria-label={`Directions to ${next.name}`} className="press flex size-12 shrink-0 items-center justify-center rounded-full bg-accent text-on-fill shadow-[var(--shadow-float)]">
                 <Directions size={21} />
               </a>
             )}
@@ -95,7 +95,7 @@ export function LiveView({
       </div>
 
       {earlier.length > 0 && (
-        <button onClick={() => setShowEarlier((v) => !v)} className="mt-4 py-1 text-[14px] font-medium text-accent">
+        <button onClick={() => setShowEarlier((v) => !v)} className="press mt-4 py-1 text-[14px] font-medium text-accent">
           {showEarlier ? "Hide earlier stops" : `Show ${earlier.length} earlier stop${earlier.length > 1 ? "s" : ""}`}
         </button>
       )}
@@ -106,7 +106,7 @@ export function LiveView({
             <li key={s.id} className={`flex items-center gap-3 rounded-xl px-2 py-2 ${isCurrent ? "-mx-2 bg-accent-soft px-4" : ""}`}>
               <span
                 className={`tnum flex size-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${
-                  isCurrent ? "bg-accent text-white" : s.kind === "fixed" ? "bg-fixed-soft text-fixed" : "bg-card text-accent-ink"
+                  isCurrent ? "bg-accent text-on-fill" : s.kind === "fixed" ? "bg-fixed-soft text-fixed" : "bg-card text-accent-ink"
                 }`}
               >
                 {numbers.get(s.id) ?? ""}
@@ -121,7 +121,7 @@ export function LiveView({
                 aria-pressed={!!s.doneAt}
                 className={`press flex size-11 shrink-0 items-center justify-center rounded-full`}
               >
-                <span className={`flex size-[26px] items-center justify-center rounded-full border-2 ${s.doneAt ? "border-ok bg-ok text-white" : s.kind === "optional" ? "border-dashed border-faint" : "border-faint"}`}>
+                <span className={`flex size-[26px] items-center justify-center rounded-full border-2 ${s.doneAt ? "border-ok bg-ok text-on-fill" : s.kind === "optional" ? "border-dashed border-faint" : "border-faint"}`}>
                   {s.doneAt && <Check size={14} />}
                 </span>
               </button>

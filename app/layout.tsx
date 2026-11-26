@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import { RegisterSW } from "@/components/RegisterSW";
+import { THEME_SCRIPT } from "@/lib/themeScript";
 import "./globals.css";
 
 const inter = Inter({
@@ -17,7 +18,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#F5F6F8",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F5F6F8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B0F14" },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -25,7 +29,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${inter.variable} antialiased`}>
+    // The inline script sets data-theme before paint, so React must accept the attribute it finds.
+    <html lang="en" data-theme="light" className={`${inter.variable} antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="font-sans">
         <RegisterSW />
         {/* Every screen is private, per-user data read at request time, so it all streams. */}

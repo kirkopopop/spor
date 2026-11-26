@@ -60,7 +60,7 @@ export function SettingsScreen() {
       <Group>
         <Row>
           <div className="flex items-center gap-3.5">
-            <div className="flex size-12 items-center justify-center rounded-full bg-ink text-[19px] font-semibold text-white">
+            <div className="flex size-12 items-center justify-center rounded-full bg-ink text-[19px] font-semibold text-on-ink">
               {(meMember?.name ?? email ?? "?")[0].toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -197,6 +197,25 @@ export function SettingsScreen() {
       <Group title="Preferences">
         <Row
           trailing={
+            <div role="radiogroup" aria-label="Appearance" className="flex rounded-lg bg-soft p-0.5">
+              {(["system", "light", "dark"] as const).map((t) => (
+                <button
+                  key={t}
+                  role="radio"
+                  aria-checked={prefs.theme === t}
+                  onClick={() => savePrefs({ theme: t }).catch((e) => setNotice(e.message))}
+                  className={`rounded-md px-3 py-1 text-[14px] capitalize ${prefs.theme === t ? "bg-raised font-semibold text-ink shadow-[var(--shadow-card)]" : "text-muted"}`}
+                >
+                  {t === "system" ? "Auto" : t}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          <span className="text-[16px]">Appearance</span>
+        </Row>
+        <Row
+          trailing={
             <div role="radiogroup" aria-label="Time format" className="flex rounded-lg bg-soft p-0.5">
               {(["24h", "12h"] as const).map((f) => (
                 <button
@@ -204,7 +223,7 @@ export function SettingsScreen() {
                   role="radio"
                   aria-checked={prefs.timeFormat === f}
                   onClick={() => savePrefs({ timeFormat: f }).catch((e) => setNotice(e.message))}
-                  className={`rounded-md px-3 py-1 text-[14px] ${prefs.timeFormat === f ? "bg-card font-semibold text-ink shadow-[var(--shadow-card)]" : "text-muted"}`}
+                  className={`rounded-md px-3 py-1 text-[14px] ${prefs.timeFormat === f ? "bg-raised font-semibold text-ink shadow-[var(--shadow-card)]" : "text-muted"}`}
                 >
                   {f === "24h" ? "18:30" : "6:30 pm"}
                 </button>
@@ -271,7 +290,7 @@ export function SettingsScreen() {
             <h3 className="text-[22px] font-bold tracking-[-0.02em]">Delete your account?</h3>
             <p className="text-[15px] leading-relaxed text-ink-2">This removes your sign-in and can&rsquo;t be undone. Trips stay with the household.</p>
             <button
-              className="press h-12 rounded-xl bg-danger text-[16px] font-semibold text-white"
+              className="press h-12 rounded-xl bg-danger text-[16px] font-semibold text-on-fill"
               onClick={async () => {
                 if (await run(() => supabase().rpc("delete_my_account"))) {
                   await supabase().auth.signOut();

@@ -63,7 +63,7 @@ function BookingList({ bookings, trip }: { bookings: Booking[]; trip: Trip }) {
       {bookings.map((b) => (
         <li key={b.id} className="flex items-center gap-3 py-3">
           {b.status === "booked" ? (
-            <span className="flex size-[22px] shrink-0 items-center justify-center rounded-md bg-ok text-white">
+            <span className="flex size-[22px] shrink-0 items-center justify-center rounded-md bg-ok text-on-fill">
               <Check size={14} />
             </span>
           ) : (
@@ -141,7 +141,7 @@ export function MoneyTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) 
           )}
         </section>
 
-        <button onClick={() => setAdding(true)} className="press h-12 rounded-xl bg-accent text-[16px] font-semibold text-white">
+        <button onClick={() => setAdding(true)} className="press h-12 rounded-xl bg-accent text-[16px] font-semibold text-on-fill">
           Add expense
         </button>
 

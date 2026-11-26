@@ -27,7 +27,7 @@ Planning happens in Claude, not in the app: spor is where the plan lives. Each t
 
 ## Operating Context
 
-- A trip moves through stages: Idea → Planning → Live → Memory (Memory/journal is not built yet).
+- A trip moves through stages: Idea → Planning → Live → Memory. Memory is a recap tab on past trips (places reached, km on foot, spend, places not reached, the notes as a journal, the route as it happened); photos are not built yet.
 - Planning: day timeline with stops, travel between stops with leave-by times, "Pick one" options, bookings checklist, budget, rain plan per day, spare-time ideas per city, notes.
 - Live: Now/Next, tick stops, expenses split within the household, notes; offline with an edit queue that syncs.
 - Hand edits in the app are light: pick an option, move a time, tick, add/edit/delete a stop, notes, expenses. Larger planning goes through Claude ("Ask Claude" links open claude.ai with the trip and day prefilled).
@@ -38,7 +38,7 @@ Planning happens in Claude, not in the app: spor is where the plan lives. Each t
 - Stack: Next.js 16 (App Router, cache components), Supabase (Postgres with RLS, Auth, OAuth 2.1 server for the connector, Realtime), Vercel. Local-first client store in IndexedDB.
 - Data per trip: days, stops (time, kind fixed/normal/optional, travel, options, booking link), bookings, budget lines, spare ideas, expenses, notes, activity log, revision.
 - Settings must cover: household & invites (members, invite a member or a trip guest, remove), Claude connector (URL, status, connected apps, revoke), account (name, email, sign out, delete account), preferences (home currency, units, time format, default timezone, theme).
-- Open decisions (not built yet): self-serve onboarding and household creation for new households; trip-level guest roles; invitations by link/email; Memory stage (journal, photos, route map of what actually happened); Places wishlist and Kit templates; dark mode.
+- Open decisions (not built yet): self-serve onboarding and household creation for new households; trip-level guest roles; invitations by link/email; Memory photos (needs a private storage bucket); Places wishlist and Kit templates. Walking legs are routed by FOSSGIS's public OSRM (stop coordinates only); transit legs stay Claude's estimates.
 - English-only UI.
 
 ## Brand Commitments

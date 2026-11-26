@@ -8,17 +8,17 @@ import { addExpense, addNote, deleteStop, saveStop, useHousehold } from "@/lib/s
 // these cover the quick fixes: a stop, an expense, a note.
 
 export const field = "h-12 w-full rounded-xl border border-line bg-card px-4 text-[16px] text-ink outline-none transition-colors focus:border-accent";
-export const primaryButton = "press h-12 w-full rounded-xl bg-accent text-[16px] font-semibold text-white disabled:opacity-40";
+export const primaryButton = "press h-12 w-full rounded-xl bg-accent text-[16px] font-semibold text-on-fill disabled:opacity-40";
 const TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
 function Segmented<T extends string>({ value, options, onChange, label }: {
   value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="grid gap-1 rounded-[14px] bg-soft p-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+    <div role="radiogroup" aria-label={label} className="grid gap-0.5 rounded-xl bg-soft p-0.5" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
       {options.map((o) => (
         <button key={o.value} type="button" role="radio" aria-checked={o.value === value} onClick={() => onChange(o.value)}
-          className={`rounded-[10px] py-2 text-[13px] ${o.value === value ? "bg-card font-semibold" : "text-ink-2"}`}>
+          className={`rounded-[10px] py-2 text-[13px] transition-colors ${o.value === value ? "bg-raised font-semibold text-ink shadow-[var(--shadow-card)]" : "text-ink-2"}`}>
           {o.label}
         </button>
       ))}
@@ -68,13 +68,13 @@ export function StopForm({ trip, day, stop, onDone }: { trip: Trip; day: Day; st
       <label>
         <span className="sr-only">Details</span>
         <textarea placeholder="Details" value={body} onChange={(e) => setBody(e.target.value)} rows={3}
-          className="w-full rounded-[14px] border border-line bg-card px-4 py-3 text-[16px] outline-none focus:border-accent" />
+          className="w-full rounded-xl border border-line bg-card px-4 py-3 text-[16px] outline-none focus:border-accent" />
       </label>
       <button type="submit" disabled={!valid} className={primaryButton}>Save</button>
       {stop &&
         (confirmDelete ? (
           <button type="button" onClick={() => { deleteStop(trip.id, stop.id); onDone(); }}
-            className="press h-12 rounded-[14px] bg-fixed-soft text-[15px] font-semibold text-danger">
+            className="press h-12 rounded-xl bg-danger text-[15px] font-semibold text-on-fill">
             Delete {stop.name}?
           </button>
         ) : (
@@ -116,7 +116,7 @@ export function ExpenseForm({ trip, stopId, onDone }: { trip: Trip; stopId?: str
           const label = trip.budget.find((b) => b.category === c)?.label ?? c[0].toUpperCase() + c.slice(1);
           return (
             <button key={c} type="button" role="radio" aria-checked={c === category} onClick={() => setCategory(c)}
-              className={`rounded-full px-3 py-2 text-[13px] ${c === category ? "bg-accent text-white" : "bg-divider text-ink-2"}`}>
+              className={`rounded-full px-3 py-2 text-[13px] ${c === category ? "bg-accent text-on-fill" : "bg-soft text-ink-2"}`}>
               {label}
             </button>
           );
@@ -152,7 +152,7 @@ export function NoteForm({ tripId, stopId, dayId, onDone, compact }: {
         <span className="sr-only">Note</span>
         <textarea placeholder={stopId ? "Note on this stop" : "Note"} value={body} onChange={(e) => setBody(e.target.value)}
           rows={compact ? 2 : 3} maxLength={4000}
-          className="w-full rounded-[14px] border border-line bg-card px-4 py-3 text-[16px] outline-none focus:border-accent" />
+          className="w-full rounded-xl border border-line bg-card px-4 py-3 text-[16px] outline-none focus:border-accent" />
       </label>
       {body.trim() && <button type="submit" className={primaryButton}>Add note</button>}
     </form>

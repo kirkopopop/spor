@@ -65,7 +65,7 @@ export default function Consent() {
           </p>
           <div className="mt-8 flex flex-col gap-3">
             {state.details.trusted && (
-              <button onClick={() => decide(true)} className="h-12 rounded-xl bg-accent text-[16px] font-semibold text-white">
+              <button onClick={() => decide(true)} className="h-12 rounded-xl bg-accent text-[16px] font-semibold text-on-fill">
                 Allow
               </button>
             )}

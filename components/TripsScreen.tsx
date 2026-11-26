@@ -25,7 +25,7 @@ export function TripsScreen() {
         <button
           onClick={() => setAdding(true)}
           aria-label="New trip"
-          className="press mb-1.5 flex size-9 items-center justify-center rounded-full bg-accent text-white shadow-[var(--shadow-float)]"
+          className="press mb-1.5 flex size-9 items-center justify-center rounded-full bg-accent text-on-fill shadow-[var(--shadow-float)]"
         >
           <Plus size={20} />
         </button>

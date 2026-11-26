@@ -43,10 +43,10 @@ export function DayPlan({
                   role="tab"
                   aria-selected={on}
                   onClick={() => onDay(d)}
-                  className={`press flex shrink-0 flex-col items-start rounded-2xl px-3.5 py-2 text-left ${on ? "bg-ink text-white" : "bg-soft text-ink"}`}
+                  className={`press flex shrink-0 flex-col items-start rounded-2xl px-3.5 py-2 text-left ${on ? "bg-ink text-on-ink" : "bg-soft text-ink"}`}
                 >
                   <span className="text-[14px] font-semibold">{dayTab(d.date)}</span>
-                  <span className={`max-w-28 truncate text-[12px] ${on ? "text-white/80" : "text-ink-2"}`}>{shortPlace(d.place) || "—"}</span>
+                  <span className={`max-w-28 truncate text-[12px] ${on ? "text-on-ink/80" : "text-ink-2"}`}>{shortPlace(d.place) || "—"}</span>
                 </button>
               );
             })}
@@ -150,7 +150,7 @@ function StopRow({
       </span>
       <span
         className={`tnum flex size-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${
-          stop.doneAt ? "bg-ok text-white" : fixed ? "bg-fixed-soft text-fixed" : "bg-accent-soft text-accent-ink"
+          stop.doneAt ? "bg-ok text-on-fill" : fixed ? "bg-fixed-soft text-fixed" : "bg-accent-soft text-accent-ink"
         } ${optional && !stop.doneAt ? "outline-[1.5px] outline-dashed outline-faint bg-card text-muted" : ""}`}
       >
         {stop.doneAt ? <Check size={14} /> : n}

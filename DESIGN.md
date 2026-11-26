@@ -255,7 +255,8 @@ Density is calm, not sparse: one line per stop with its time beneath, detail beh
 **Key Characteristics:**
 - A full-bleed map on top, the plan in a draggable sheet (peek 30%, half 56%, full 92%); the plan as the left half at 900px and wider, map the right half; an open stop docks as a 380px card against the plan at the seam with the map, as tall as its content; at panel widths of 560px+ stop rows read as an itinerary (time, number, stop, travel in its own column).
 - Light grouped ground (#f5f6f8), white sheets and grouped lists, ink text, one blue accent.
-- Numbered stops that match numbered pins; dashed connectors for stop order, one solid leg for the way you are going.
+- Numbered stops that match numbered pins; real walking paths along the streets, dashed connectors where only the order is known, one solid leg for the way you are going.
+- A night palette for evenings (System / Light / Dark), the same world with fills brightened and text on them turned dark.
 - System UI type (SF on Apple devices, Inter elsewhere), negative tracking on titles, tabular figures on times.
 - Soft, offset shadows only on things that float over the map: the sheet, round map controls, pins.
 - Quiet press feedback (scale 0.98) on every tappable row and button; native-feeling sheet physics.
@@ -359,7 +360,7 @@ A hybrid: tonal layering for everything that belongs to the page, real offset sh
 
 Soft, continuous curves throughout, scaled to the element: full pills for chips, pins, stop numbers and round controls; 22px for the bottom sheet and the Overview cards and map; 24px for the top of a modal sheet; 20px for the Live next card; 16px for grouped lists, action buttons, inset panels and day pills; 14px for the segmented-control track and text areas; 12px for fields and primary buttons; 10px for a selected segment; 8px for the focus ring. Borders are rare (fields, the option list) and always the 1px hairline. The sheet grabber is a 36 by 5px pill.
 
-On the map: stop order is a 2px dashed line (dash 1.5, gap 2) at 50% opacity; the active leg is a 3px solid line on a 6px white casing at 90%; every pin has a 2px white ring.
+On the map, three line styles tell the truth about a leg: a routed walk is a 2.5px solid line along the streets at 55% opacity; a leg whose path isn't known (transit, or a walk after a train) is a 2px dashed line (dash 1.5, gap 2) at 50%; the active leg is a 3px solid line on a 6px casing in the card colour at 90%. Every pin has a 2px ring in the card colour. Routed walks also replace Claude's estimated minutes in the list, the place card and leave-by times (the `~` goes away).
 
 ## Components
 
@@ -403,6 +404,12 @@ White 26px circles with a 2px white ring and the Pin shadow, numbered in 12px se
 ### Stop Row and Place Card (signature)
 A stop row is a 28px number disc (Blue Wash with Deep Route Blue by default, Orange Wash with orange for fixed, Ticked Green with a check when done, a dashed Faint Slate outline for optional), the name in 16px, and the time beneath in 14px tabular (semibold orange when fixed), with "To book" or "Pick one" inline. Between rows, a quiet 13px travel line on a 2px Divider connector; "leave by" appears only before a fixed stop. Tapping a row turns the sheet into the stop's place card (fade-in 180ms) and flies the map to its pin (700ms): a solid 32px number, the 24px name, status chips, the four action buttons, then travel, options and notes.
 
+### Memory (past trips)
+A past trip opens on a Memory tab before Plan. One big number (places reached, Display 52px) with "of N planned" and how many days were told from the plan; the facts in one 15px line (days, cities, km on foot from routed walks, spend of planned); then Day by day rows (ticked / planned, or "N planned" for an unticked day), Didn't make it (only recorded days), and the notes as a Journal, oldest first. The map shows each day's line through the places reached with one green pin per day; tapping a pin or a day row opens that day's plan.
+
+### Night palette
+Set before first paint from the System / Light / Dark choice (Settings → Preferences → Appearance; saved on the device and on the account). Ground #0b0f14, sheets #161c24, ink #e9eef3, muted #8d99a6 (5:1 on soft), accent #5b9bff, fixed #ff8f57, ok #41d098, danger #ff6b6b; text on fills turns #0b0f14; the selected segment lifts to raised #343e4a. Every text pairing is at least 4.5:1. The map switches to OpenFreeMap's dark style.
+
 ### Sheets
 - **Bottom sheet:** the trip's plan over the map: white, 22px top corners, the Sheet shadow, a 36 by 5px Hairline grabber that is also a button, snapping with a 380ms cubic-bezier(.2, .9, .25, 1) height transition.
 - **Modal sheet:** forms and confirmations: slides up in 220ms (cubic-bezier(.2, .8, .2, 1)) over a Night Ink 30% scrim, 24px top corners, a 40 by 4px grabber, a 36px round close button on Divider. Drag down 110px, or flick, to close; Back and Escape close it.
@@ -412,7 +419,9 @@ A stop row is a 28px number disc (Blue Wash with Deep Route Blue by default, Ora
 ### Do:
 - **Do** keep the map on top of every trip and the plan in the sheet, opening at half (56%).
 - **Do** number every stop and use the same number and tone for its pin.
-- **Do** draw stop order as the 2px dashed connector and only the leg into the next or open stop as the solid 3px line on its white casing.
+- **Do** draw a routed walk as its real path, anything unrouted as the 2px dashed connector, and only the leg into the next or open stop as the solid 3px line on its casing.
+- **Do** take every colour from a token, including map pins and lines (read at draw time), so the night palette follows everywhere. Text on a coloured fill is `on-fill`, on an ink fill `on-ink`; never hard-code white.
+- **Do** tell a past trip from its ticks only on days someone ticked; a day with no ticks is told from its plan, never listed as missed.
 - **Do** keep Route Blue for the route, the next or selected stop, the active tab and the primary action; orange for fixed and to-book; green for done and booked.
 - **Do** set every time, duration and amount in tabular figures.
 - **Do** give every tappable element the 0.98 press and a 48px minimum height (44px for ticks).

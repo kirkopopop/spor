@@ -47,7 +47,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={status === "sending"}
-            className="h-12 rounded-xl bg-accent text-[16px] font-semibold text-white disabled:opacity-60"
+            className="h-12 rounded-xl bg-accent text-[16px] font-semibold text-on-fill disabled:opacity-60"
           >
             {status === "sending" ? "Sending…" : "Send link"}
           </button>

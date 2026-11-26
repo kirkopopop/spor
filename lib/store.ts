@@ -5,6 +5,7 @@ import { createStore, get, set } from "idb-keyval";
 import { applyOps, opToRpc, type Op, type StopDraft, type StopPatch } from "./ops";
 import { rowsToTrip, TRIP_SELECT, type TripRow } from "./db";
 import { setClockFormat } from "./format";
+import { applyTheme, readThemePref, type ThemePref } from "./theme";
 import { hasSupabase } from "./supabase/env";
 import { supabase } from "./supabase/client";
 import type { Expense, Member, Note, Trip } from "./types";
@@ -29,8 +30,8 @@ type State = {
   prefs: Prefs;
 };
 
-export type Prefs = { timeFormat: "24h" | "12h"; homeCurrency: Trip["currency"] };
-const DEFAULT_PREFS: Prefs = { timeFormat: "24h", homeCurrency: "EUR" };
+export type Prefs = { timeFormat: "24h" | "12h"; homeCurrency: Trip["currency"]; theme: ThemePref };
+const DEFAULT_PREFS: Prefs = { timeFormat: "24h", homeCurrency: "EUR", theme: "system" };
 
 const EMPTY: State = { loaded: false, online: true, snapshots: [], outbox: [], members: [], prefs: DEFAULT_PREFS };
 let state: State = EMPTY;
@@ -125,6 +126,7 @@ let started = false;
 function start() {
   if (started || typeof window === "undefined") return;
   started = true;
+  setState({ prefs: { ...state.prefs, theme: readThemePref() } }); // what this phone painted with
   (async () => {
     try {
       if (hasSupabase) {
@@ -133,8 +135,11 @@ function start() {
         if (data.session) {
           owner = data.session.user.id;
           const meta = data.session.user.user_metadata ?? {};
-          const prefs = { ...DEFAULT_PREFS, ...(meta.prefs as Partial<Prefs> | undefined) };
+          const saved = meta.prefs as Partial<Prefs> | undefined;
+          const prefs = { ...DEFAULT_PREFS, ...saved };
           setClockFormat(prefs.timeFormat);
+          // The account follows the person to a new phone; this phone painted from its own copy.
+          if (saved?.theme) applyTheme(saved.theme);
           setState({ me: owner, email: data.session.user.email, prefs });
         }
       }
@@ -205,6 +210,7 @@ export function usePrefs() {
 export async function savePrefs(next: Partial<Prefs>) {
   const prefs = { ...state.prefs, ...next };
   setClockFormat(prefs.timeFormat);
+  if (next.theme) applyTheme(next.theme);
   setState({ prefs });
   if (hasSupabase) {
     const { error } = await supabase().auth.updateUser({ data: { prefs } });

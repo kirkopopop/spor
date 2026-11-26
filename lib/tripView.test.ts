@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayPins, groupTrips, legInto, tripRoutes } from "./tripView";
+import { dayPins, groupTrips, tripRoutes } from "./tripView";
 import type { Day, Trip } from "./types";
 
 const day: Day = {
@@ -30,14 +30,6 @@ describe("dayPins", () => {
 
 const trip = (id: string, stage: Trip["stage"], start: string, end: string): Trip =>
   ({ id, name: id, stage, startDate: start, endDate: end, timezone: "Europe/Berlin", currency: "EUR", people: [], days: [day], bookings: [], budget: [], spare: [] }) as Trip;
-
-describe("legInto", () => {
-  it("joins a stop to the previous one on the map, skipping journeys", () => {
-    expect(legInto(day, "c")).toEqual([[48.1, 11.5], [48.13, 11.58]]);
-    expect(legInto(day, "a")).toEqual([]); // first on the map
-    expect(legInto(day, undefined)).toEqual([]);
-  });
-});
 
 describe("groupTrips", () => {
   it("sorts trips into now, upcoming, ideas and past by stage and date", () => {

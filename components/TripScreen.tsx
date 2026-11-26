@@ -8,10 +8,14 @@ import { useUrlParam } from "@/lib/useUrlParam";
 import { dateRange, todayIn, toBookCount } from "@/lib/format";
 import { nowNext, tripClock } from "@/lib/live";
 import { dayPins, dayRoutes } from "@/lib/tripView";
+import { recapMap } from "@/lib/recap";
+import { applyLegs } from "@/lib/walkLegs";
+import { useWalkLegs } from "@/lib/useWalkLegs";
 import type { Day } from "@/lib/types";
 import { TripMap } from "./map/TripMap";
 import { BottomSheet, useWide, type Snap } from "./trip/BottomSheet";
 import { DayPlan } from "./trip/DayPlan";
+import { Recap } from "./trip/Recap";
 import { LiveView } from "./LiveView";
 import { StopDetail } from "./StopDetail";
 import { BookTab, MoneyTab, NotesTab } from "./TripTabs";
@@ -21,8 +25,8 @@ import { Back } from "./icons";
 
 const CARD_W = 380; // the stop card over the map on wide screens
 
-export type Tab = "today" | "plan" | "book" | "money" | "notes";
-const LABEL: Record<Tab, string> = { today: "Today", plan: "Plan", book: "Bookings", money: "Money", notes: "Notes" };
+export type Tab = "today" | "memory" | "plan" | "book" | "money" | "notes";
+const LABEL: Record<Tab, string> = { today: "Today", memory: "Memory", plan: "Plan", book: "Bookings", money: "Money", notes: "Notes" };
 type Modal = { kind: "stop-form"; stopId?: string } | { kind: "rain" };
 
 /** A trip: the map on top, the plan in a sheet over it. Tab, day and open stop live in the address. */
@@ -40,30 +44,44 @@ export function TripScreen() {
   const wide = useWide();
 
   const clock = trip ? tripClock(trip, new Date(), preview) : undefined;
+  const today = trip ? todayIn(trip.timezone) : "";
   const live = !!trip && (trip.stage === "live" || !!clock?.during);
-  const tabs: Tab[] = live ? ["today", "plan", "book", "money", "notes"] : ["plan", "book", "money", "notes"];
+  const past = !!trip && !live && (trip.stage === "memory" || (!!trip.endDate && trip.endDate < today));
+  const tabs: Tab[] = live
+    ? ["today", "plan", "book", "money", "notes"]
+    : past
+      ? ["memory", "plan", "book", "money", "notes"]
+      : ["plan", "book", "money", "notes"];
   const tab: Tab = tabs.includes(tabParam as Tab) ? (tabParam as Tab) : tabs[0];
 
-  const allStops = trip?.days.flatMap((d) => d.stops) ?? [];
-  const openStop = stopParam ? allStops.find((s) => s.id === stopParam) : undefined;
-  const stopDay = openStop ? trip?.days.find((d) => d.stops.some((s) => s.id === openStop.id)) : undefined;
+  const rawStops = trip?.days.flatMap((d) => d.stops) ?? [];
+  const stopDay = stopParam ? trip?.days.find((d) => d.stops.some((s) => s.id === stopParam)) : undefined;
   const liveDay = live ? trip?.days.find((d) => d.date === clock?.date) : undefined;
-  const today = trip ? todayIn(trip.timezone) : "";
-  const day: Day | undefined =
+  const rawDay: Day | undefined =
     stopDay ??
     (tab === "today" ? liveDay : undefined) ??
     trip?.days.find((d) => d.date === dayParam) ??
     trip?.days.find((d) => d.date === today) ??
     trip?.days[0];
+
+  // Real walking paths and times: for the shown day, or the whole trip in Memory.
+  const memory = tab === "memory" && !stopParam;
+  const legDays = useMemo(() => (memory ? (trip?.days ?? []) : [rawDay]), [memory, trip, rawDay]);
+  const legs = useWalkLegs(legDays);
+  const day = useMemo(() => rawDay && applyLegs(rawDay, legs), [rawDay, legs]);
+  // The trip as shown: the day with routed times in place, so lists, cards and leave-by agree.
+  const view = useMemo(() => (trip && day && day !== rawDay ? { ...trip, days: trip.days.map((d) => (d.id === day.id ? day : d)) } : trip), [trip, day, rawDay]);
+  const openStop = stopParam ? view?.days.flatMap((d) => d.stops).find((s) => s.id === stopParam) : undefined;
+
   const nextId = day && clock && day.date === clock.date ? nowNext(day.stops, clock.time).next?.id : undefined;
   const { pins, numbers } = useMemo(
     () => (day ? dayPins(day, nextId) : { pins: [], numbers: new Map<string, number>(), route: { id: "", points: [] } }),
     [day, nextId],
   );
-  // Stop order as quiet dashes (not real paths); the leg into the open or next stop solid.
   const activeId = stopParam ?? nextId; // a plain id from the address, not the stop object
-  const routes = useMemo(() => dayRoutes(day, activeId), [day, activeId]);
-  const openStopId = stopParam && allStops.some((s) => s.id === stopParam) ? stopParam : undefined;
+  const routes = useMemo(() => dayRoutes(day, activeId, legs), [day, activeId, legs]);
+  const tripMap = useMemo(() => (memory && trip ? recapMap(trip, legs) : undefined), [memory, trip, legs]);
+  const openStopId = stopParam && rawStops.some((s) => s.id === stopParam) ? stopParam : undefined;
   const card = wide && !!openStopId; // on wide screens a stop opens as a card over the map
 
   // Escape closes the stop card.
@@ -89,6 +107,11 @@ export function TripScreen() {
   const open = (stopId: string) => {
     setStopParam(stopId);
     if (snap === "peek") setSnap("half");
+  };
+  const shown = view ?? trip; // with routed walking times; edits still go through the stored trip
+  const goDay = (d: Day) => {
+    setTabParam("plan");
+    setDayParam(d.date);
   };
   const toBook = toBookCount(trip);
   const others = trip.people.join(", ");
@@ -117,7 +140,7 @@ export function TripScreen() {
               setTabParam(t === tabs[0] ? null : t);
             }}
             className={`rounded-[10px] py-1.5 text-[13px] whitespace-nowrap transition-colors ${
-              t === tab ? "bg-card font-semibold text-ink shadow-[var(--shadow-card)]" : "text-ink-2"
+              t === tab ? "bg-raised font-semibold text-ink shadow-[var(--shadow-card)]" : "text-ink-2"
             }`}
           >
             {LABEL[t]}
@@ -131,13 +154,14 @@ export function TripScreen() {
   return (
     <div className="fixed inset-0 overflow-hidden bg-map">
       <TripMap
-        pins={pins}
-        routes={routes}
+        pins={tripMap?.pins ?? pins}
+        routes={tripMap?.routes ?? routes}
         selectedId={openStop?.id}
-        onSelect={open}
-        padding={{ top: 80, bottom: sheetPx + 24, left: card ? CARD_W + 40 : 40, right: 40 }}
+        onSelect={tripMap ? (dayId) => goDay(trip.days.find((d) => d.id === dayId)!) : open}
+        // With no sheet below (laptop), keep pins clear of the bottom edge and the map credit.
+        padding={{ top: 80, bottom: sheetPx ? sheetPx + 24 : 64, left: card ? CARD_W + 40 : 56, right: 56 }}
         className="absolute inset-0 min-[900px]:left-1/2"
-        label={`Map of ${day ? day.title || day.date : trip.name}`}
+        label={tripMap ? `Map of ${trip.name} as it happened` : `Map of ${day ? day.title || day.date : trip.name}`}
       />
 
       <Link
@@ -151,7 +175,7 @@ export function TripScreen() {
       <BottomSheet header={header} snap={snap} onSnap={setSnap} onHeight={onHeight}>
         {openStop && !card ? (
           <StopDetail
-            trip={trip}
+            trip={shown}
             stop={openStop}
             number={numbers.get(openStop.id)}
             booking={openStop.bookingId ? trip.bookings.find((b) => b.id === openStop.bookingId) : undefined}
@@ -161,10 +185,12 @@ export function TripScreen() {
             onEdit={() => setModal({ kind: "stop-form", stopId: openStop.id })}
           />
         ) : tab === "today" ? (
-          <LiveView trip={trip} preview={preview} numbers={numbers} onOpen={open} />
+          <LiveView trip={shown} preview={preview} numbers={numbers} onOpen={open} />
+        ) : tab === "memory" ? (
+          <Recap trip={shown} legs={legs} onDay={goDay} />
         ) : tab === "plan" ? (
           <DayPlan
-            trip={trip}
+            trip={shown}
             day={day}
             numbers={numbers}
             selectedId={card ? openStopId : undefined}
@@ -196,7 +222,7 @@ export function TripScreen() {
           <div className="min-h-0 overflow-y-auto overscroll-contain pt-5">
             <StopDetail
               key={openStop.id}
-              trip={trip}
+              trip={shown}
               stop={openStop}
               number={numbers.get(openStop.id)}
               booking={openStop.bookingId ? trip.bookings.find((b) => b.id === openStop.bookingId) : undefined}
@@ -214,8 +240,8 @@ export function TripScreen() {
           <StopForm
             key={modal.stopId ?? "new"}
             trip={trip}
-            day={trip.days.find((d) => d.stops.some((s) => s.id === modal.stopId)) ?? day}
-            stop={modal.stopId ? allStops.find((s) => s.id === modal.stopId) : undefined}
+            day={trip.days.find((d) => d.stops.some((s) => s.id === modal.stopId)) ?? rawDay ?? day}
+            stop={modal.stopId ? rawStops.find((s) => s.id === modal.stopId) : undefined}
             onDone={() => window.history.back()}
           />
         )}

@@ -33,7 +33,7 @@ export function HomeScreen() {
     <Screen
       title="Overview"
       action={
-        <Link href="/settings" aria-label="Settings" className="press mb-1.5 flex size-9 items-center justify-center rounded-full bg-ink text-[15px] font-semibold text-white">
+        <Link href="/settings" aria-label="Settings" className="press mb-1.5 flex size-9 items-center justify-center rounded-full bg-ink text-[15px] font-semibold text-on-ink">
           {(myName ?? "spor")[0].toUpperCase()}
         </Link>
       }
@@ -94,7 +94,7 @@ function NextTrip({ trip, live, myName }: { trip: Trip; live: boolean; myName?: 
             href={`https://claude.ai/new?q=${encodeURIComponent(`Let's plan ${trip.name} in spor (${trip.startDate} to ${trip.endDate}, ${trip.people.join(", ")}).`)}`}
             target="_blank"
             rel="noreferrer"
-            className="press inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-[15px] font-semibold text-white"
+            className="press inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-[15px] font-semibold text-on-fill"
           >
             <ChatIcon size={17} />
             Plan with Claude
@@ -120,7 +120,7 @@ function EmptyNext() {
         href={`https://claude.ai/new?q=${encodeURIComponent("Let's plan a new trip in spor.")}`}
         target="_blank"
         rel="noreferrer"
-        className="press mt-3 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-[15px] font-semibold text-white"
+        className="press mt-3 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-[15px] font-semibold text-on-fill"
       >
         <ChatIcon size={17} />
         Plan with Claude

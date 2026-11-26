@@ -11,7 +11,7 @@ export function RouteThumb({ trip, size }: { trip: Trip; size: number }) {
         <polyline
           points={pts.map((p) => p.join(",")).join(" ")}
           fill="none"
-          stroke="#2563EB"
+          className="stroke-accent"
           strokeWidth={5}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -19,11 +19,11 @@ export function RouteThumb({ trip, size }: { trip: Trip; size: number }) {
       )}
       {pts.length > 0 ? (
         <>
-          <circle cx={pts[0][0]} cy={pts[0][1]} r={7} fill="#fff" stroke="#2563EB" strokeWidth={4} />
-          <circle cx={pts.at(-1)![0]} cy={pts.at(-1)![1]} r={7} fill="#2563EB" />
+          <circle cx={pts[0][0]} cy={pts[0][1]} r={7} className="fill-card stroke-accent" strokeWidth={4} />
+          <circle cx={pts.at(-1)![0]} cy={pts.at(-1)![1]} r={7} className="fill-accent" />
         </>
       ) : (
-        <circle cx={50} cy={50} r={8} fill="none" stroke="#A3ACB7" strokeWidth={4} />
+        <circle cx={50} cy={50} r={8} fill="none" className="stroke-faint" strokeWidth={4} />
       )}
     </svg>
   );

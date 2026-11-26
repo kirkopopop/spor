@@ -1,5 +1,6 @@
 import type { MapPin, MapRoute } from "@/components/map/TripMap";
 import type { Day, Trip } from "./types";
+import type { Leg } from "./walkLegs";
 
 const mapped = (s: { lat?: number; lng?: number; offMap?: boolean }) => s.lat != null && s.lng != null && !s.offMap;
 
@@ -20,23 +21,25 @@ export function dayPins(day: Day, nextId?: string) {
   return { pins, numbers, route };
 }
 
-/** The leg into a stop: from the previous stop that has a place on the map. */
-export function legInto(day: Day, stopId?: string): [number, number][] {
-  if (!stopId) return [];
-  const placed = day.stops.filter(mapped);
-  const i = placed.findIndex((s) => s.id === stopId);
-  if (i <= 0) return [];
-  return [placed[i - 1], placed[i]].map((s) => [s.lat!, s.lng!]);
-}
-
-/** A day's lines: stop order as quiet dashes (not real paths), the leg into `activeId` solid. */
-export function dayRoutes(day: Day | undefined, activeId?: string): MapRoute[] {
+/**
+ * A day's lines, one per connection between stops on the map: a routed walk follows its real
+ * path, anything else is a quiet dash (stop order, not a path), and the leg into `activeId` is solid.
+ */
+export function dayRoutes(day: Day | undefined, activeId?: string, legs?: Map<string, Leg>): MapRoute[] {
   if (!day) return [];
-  const leg = legInto(day, activeId);
-  return [
-    { ...dayPins(day).route, style: "dashed" },
-    ...(leg.length ? [{ id: `${day.id}-leg`, points: leg, style: "solid" as const }] : []),
-  ];
+  const placed = day.stops.filter(mapped);
+  return placed.slice(1).map((s, i) => {
+    const prev = placed[i];
+    const leg = legs?.get(s.id);
+    return {
+      id: `${day.id}-${s.id}`,
+      points: leg?.points ?? [
+        [prev.lat!, prev.lng!],
+        [s.lat!, s.lng!],
+      ],
+      style: s.id === activeId ? "solid" : leg ? "path" : "dashed",
+    };
+  });
 }
 
 /** Where a trip stands relative to today: now, upcoming, an idea, or past. */
