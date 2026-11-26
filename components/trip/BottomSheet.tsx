@@ -1,10 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 export type Snap = "peek" | "half" | "full";
 const FRACTION: Record<Snap, number> = { peek: 0.3, half: 0.56, full: 0.92 };
 const ORDER: Snap[] = ["peek", "half", "full"];
+
+const WIDE = "(min-width: 900px)";
+/** Laptop layout: the plan as a left half, the map as the right half. */
+export function useWide() {
+  return useSyncExternalStore(
+    (cb) => {
+      const mq = window.matchMedia(WIDE);
+      mq.addEventListener("change", cb);
+      return () => mq.removeEventListener("change", cb);
+    },
+    () => window.matchMedia(WIDE).matches,
+    () => false,
+  );
+}
 
 /**
  * The sheet over the map, Apple Maps style: drag the top edge between peek, half and
@@ -25,15 +39,12 @@ export function BottomSheet({
   onHeight?: (px: number) => void;
 }) {
   const [vh, setVh] = useState(0);
-  const [wide, setWide] = useState(false);
+  const wide = useWide();
   const [drag, setDrag] = useState<number | null>(null); // live height while dragging
   const start = useRef<{ y: number; h: number; t: number } | null>(null);
 
   useEffect(() => {
-    const read = () => {
-      setVh(window.innerHeight);
-      setWide(window.innerWidth >= 900);
-    };
+    const read = () => setVh(window.innerHeight);
     read();
     window.addEventListener("resize", read);
     return () => window.removeEventListener("resize", read);
@@ -72,7 +83,7 @@ export function BottomSheet({
 
   if (wide) {
     return (
-      <section aria-label="Trip" className="absolute top-4 bottom-4 left-4 z-20 flex w-[420px] flex-col overflow-hidden rounded-[22px] bg-card shadow-[var(--shadow-float)]">
+      <section aria-label="Trip" className="absolute top-4 bottom-4 left-4 z-20 flex w-[calc(50%-24px)] flex-col overflow-hidden rounded-[22px] bg-card shadow-[var(--shadow-float)]">
         <div className="shrink-0 px-5 pt-5">{header}</div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
       </section>

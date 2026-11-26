@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { editStop, useTrip } from "@/lib/store";
 import { useUrlParam } from "@/lib/useUrlParam";
 import { dateRange, todayIn, toBookCount } from "@/lib/format";
@@ -10,14 +10,16 @@ import { nowNext, tripClock } from "@/lib/live";
 import { dayPins, dayRoutes } from "@/lib/tripView";
 import type { Day } from "@/lib/types";
 import { TripMap } from "./map/TripMap";
-import { BottomSheet, type Snap } from "./trip/BottomSheet";
+import { BottomSheet, useWide, type Snap } from "./trip/BottomSheet";
 import { DayPlan } from "./trip/DayPlan";
 import { LiveView } from "./LiveView";
 import { StopDetail } from "./StopDetail";
 import { BookTab, MoneyTab, NotesTab } from "./TripTabs";
 import { Sheet } from "./Sheet";
 import { StopForm } from "./Forms";
-import { Back } from "./icons";
+import { Back, Close } from "./icons";
+
+const CARD_W = 380; // the stop card over the map on wide screens
 
 export type Tab = "today" | "plan" | "book" | "money" | "notes";
 const LABEL: Record<Tab, string> = { today: "Today", plan: "Plan", book: "Bookings", money: "Money", notes: "Notes" };
@@ -35,6 +37,7 @@ export function TripScreen() {
   const [sheetPx, setSheetPx] = useState(0);
   const [modal, setModal] = useState<Modal>();
   const onHeight = useCallback((px: number) => setSheetPx(px), []);
+  const wide = useWide();
 
   const clock = trip ? tripClock(trip, new Date(), preview) : undefined;
   const live = !!trip && (trip.stage === "live" || !!clock?.during);
@@ -60,6 +63,16 @@ export function TripScreen() {
   // Stop order as quiet dashes (not real paths); the leg into the open or next stop solid.
   const activeId = stopParam ?? nextId; // a plain id from the address, not the stop object
   const routes = useMemo(() => dayRoutes(day, activeId), [day, activeId]);
+  const openStopId = stopParam && allStops.some((s) => s.id === stopParam) ? stopParam : undefined;
+  const card = wide && !!openStopId; // on wide screens a stop opens as a card over the map
+
+  // Escape closes the stop card.
+  useEffect(() => {
+    if (!card) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !modal && window.history.back();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [card, modal]);
 
   if (!loaded) return <div className="min-h-dvh bg-map" aria-busy="true" />;
   if (!trip) {
@@ -122,8 +135,8 @@ export function TripScreen() {
         routes={routes}
         selectedId={openStop?.id}
         onSelect={open}
-        padding={{ top: 80, bottom: sheetPx + 24, left: 40, right: 40 }}
-        className="absolute inset-0 min-[900px]:left-[452px]"
+        padding={{ top: 80, bottom: sheetPx + 24, left: 40, right: card ? CARD_W + 48 : 40 }}
+        className="absolute inset-0 min-[900px]:left-1/2"
         label={`Map of ${day ? day.title || day.date : trip.name}`}
       />
 
@@ -136,7 +149,7 @@ export function TripScreen() {
       </Link>
 
       <BottomSheet header={header} snap={snap} onSnap={setSnap} onHeight={onHeight}>
-        {openStop ? (
+        {openStop && !card ? (
           <StopDetail
             trip={trip}
             stop={openStop}
@@ -154,7 +167,11 @@ export function TripScreen() {
             trip={trip}
             day={day}
             numbers={numbers}
-            onDay={(d) => setDayParam(d.date)}
+            selectedId={card ? openStopId : undefined}
+            onDay={(d) => {
+              if (card) setStopParam(null);
+              setDayParam(d.date);
+            }}
             onOpen={open}
             onAdd={() => setModal({ kind: "stop-form" })}
             onRain={() => setModal({ kind: "rain" })}
@@ -167,6 +184,34 @@ export function TripScreen() {
           <NotesTab trip={trip} />
         )}
       </BottomSheet>
+
+      {card && openStop && (
+        <aside
+          aria-label="Stop"
+          style={{ width: CARD_W }}
+          className="absolute top-4 right-4 bottom-4 z-30 flex flex-col overflow-hidden rounded-[22px] bg-card shadow-[var(--shadow-float)] [animation:card-in_220ms_cubic-bezier(.2,.9,.25,1)]"
+        >
+          <button
+            onClick={() => window.history.back()}
+            aria-label="Close stop"
+            className="press absolute top-3 right-3 z-10 flex size-8 items-center justify-center rounded-full bg-soft text-ink-2"
+          >
+            <Close size={16} />
+          </button>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-5 pr-8">
+            <StopDetail
+              key={openStop.id}
+              trip={trip}
+              stop={openStop}
+              number={numbers.get(openStop.id)}
+              booking={openStop.bookingId ? trip.bookings.find((b) => b.id === openStop.bookingId) : undefined}
+              onShift={(time) => editStop(trip.id, openStop.id, { time })}
+              onPick={(pickedOptionId) => editStop(trip.id, openStop.id, { pickedOptionId })}
+              onEdit={() => setModal({ kind: "stop-form", stopId: openStop.id })}
+            />
+          </div>
+        </aside>
+      )}
 
       <Sheet open={!!modal} onClose={() => setModal(undefined)} label={modal?.kind === "rain" ? "If it rains" : "Stop"}>
         {modal?.kind === "stop-form" && day && (

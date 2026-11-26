@@ -11,6 +11,7 @@ export function DayPlan({
   trip,
   day,
   numbers,
+  selectedId,
   onDay,
   onOpen,
   onAdd,
@@ -19,6 +20,7 @@ export function DayPlan({
   trip: Trip;
   day?: Day;
   numbers: Map<string, number>;
+  selectedId?: string;
   onDay: (d: Day) => void;
   onOpen: (stopId: string) => void;
   onAdd: () => void;
@@ -81,7 +83,7 @@ export function DayPlan({
               {day.stops.map((s, i) => (
                 <li key={s.id}>
                   {s.go && <TravelLine stop={s} first={i === 0} />}
-                  <StopRow stop={s} n={numbers.get(s.id) ?? i + 1} booking={s.bookingId ? bookings.get(s.bookingId) : undefined} onOpen={onOpen} />
+                  <StopRow stop={s} n={numbers.get(s.id) ?? i + 1} booking={s.bookingId ? bookings.get(s.bookingId) : undefined} selected={s.id === selectedId} onOpen={onOpen} />
                 </li>
               ))}
             </ol>
@@ -111,12 +113,28 @@ export function DayPlan({
 
 const shortPlace = (p: string) => p.split("→").at(-1)!.trim();
 
-function StopRow({ stop, n, booking, onOpen }: { stop: Stop; n: number; booking?: Booking; onOpen: (id: string) => void }) {
+function StopRow({
+  stop,
+  n,
+  booking,
+  selected,
+  onOpen,
+}: {
+  stop: Stop;
+  n: number;
+  booking?: Booking;
+  selected?: boolean;
+  onOpen: (id: string) => void;
+}) {
   const fixed = stop.kind === "fixed";
   const optional = stop.kind === "optional";
   const picked = stop.options?.find((o) => o.id === stop.pickedOptionId);
   return (
-    <button onClick={() => onOpen(stop.id)} className="press flex w-full items-center gap-3.5 rounded-xl py-2.5 text-left">
+    <button
+      onClick={() => onOpen(stop.id)}
+      aria-current={selected || undefined}
+      className={`press -mx-2 flex w-[calc(100%+16px)] items-center gap-3.5 rounded-xl px-2 py-2.5 text-left transition-colors ${selected ? "bg-accent-soft" : ""}`}
+    >
       <span
         className={`tnum flex size-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${
           stop.doneAt ? "bg-ok text-white" : fixed ? "bg-fixed-soft text-fixed" : "bg-accent-soft text-accent-ink"
