@@ -30,6 +30,7 @@ export function TripMap({
   padding = { top: 72, bottom: 72, left: 40, right: 40 },
   className = "",
   label,
+  center,
 }: {
   pins?: MapPin[];
   routes?: MapRoute[];
@@ -39,6 +40,7 @@ export function TripMap({
   padding?: { top: number; bottom: number; left: number; right: number };
   className?: string;
   label: string;
+  center?: [number, number]; // where to look when nothing on the map has a place (the destination)
 }) {
   const theme = useTheme();
   const box = useRef<HTMLDivElement>(null);
@@ -154,6 +156,7 @@ export function TripMap({
     }
   }, [gen, readyGen, routes]);
 
+  const [cLat, cLng] = center ?? [];
   // Camera: fit the day (or fly to the selected stop) whenever what's shown changes. Runs as soon as
   // the map exists, so it works offline or before the style arrives.
   useEffect(() => {
@@ -177,10 +180,12 @@ export function TripMap({
         ],
         { padding, duration: 600 * animate, maxZoom: 14 },
       );
+    } else if (cLat != null && cLng != null) {
+      m.jumpTo({ center: [cLng, cLat], zoom: 11, padding });
     }
     // padding is a fresh object each render; its numbers are what matter
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gen, pins, routes, selectedId, padding.top, padding.bottom, padding.left, padding.right]);
+  }, [gen, pins, routes, selectedId, cLat, cLng, padding.top, padding.bottom, padding.left, padding.right]);
 
   // Pins: redrawn after every camera move, with overlapping ones merged into one marker
   // that names its stops ("2–7"), so every row's number can be found on the map.

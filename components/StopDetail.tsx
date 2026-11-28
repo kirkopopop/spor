@@ -90,10 +90,13 @@ export function StopDetail({
         {stop.fee && <span className="rounded-full bg-soft px-2.5 py-1 text-ink-2">{stop.fee.label}</span>}
       </div>
 
-      <div className="mt-4 grid grid-cols-4 gap-2">
-        <ActionButton href={maps} label="Directions" primary>
-          <Directions size={19} />
-        </ActionButton>
+      {(maps || canEdit) && (
+      <div className={`mt-4 grid gap-2 ${maps && canEdit ? "grid-cols-4" : "grid-cols-3"}`}>
+        {maps && (
+          <ActionButton href={maps} label="Directions" primary>
+            <Directions size={19} />
+          </ActionButton>
+        )}
         {canEdit && (
           <>
             <ActionButton onClick={() => onShift(shiftTime(stop.time, -15))} label="Earlier">
@@ -108,6 +111,7 @@ export function StopDetail({
           </>
         )}
       </div>
+      )}
 
       {stop.go && (
         <section className="mt-5 flex gap-3 rounded-2xl bg-bg p-4 text-[15px]">

@@ -107,3 +107,36 @@ export async function searchCities(q: string, signal?: AbortSignal): Promise<Cit
   const { features } = (await res.json()) as { features: PhotonFeature[] };
   return pickCities(features, t);
 }
+
+export type PlaceResult = { name: string; detail: string; lat: number; lng: number };
+type PlaceProps = PhotonFeature["properties"] & { street?: string; housenumber?: string; city?: string; district?: string };
+
+/** Photon results as places to put a stop: the name, then where it is (street, area, city). */
+export function pickPlaces(features: PhotonFeature[], limit = 6): PlaceResult[] {
+  const out: PlaceResult[] = [];
+  for (const f of features) {
+    const p = f.properties as PlaceProps;
+    const name = p.name ?? (p.street ? [p.street, p.housenumber].filter(Boolean).join(" ") : undefined);
+    if (!name) continue;
+    const street = p.name && p.street ? [p.street, p.housenumber].filter(Boolean).join(" ") : undefined;
+    const detail = [...new Set([street, p.district, p.city ?? p.state, p.country].filter((x): x is string => !!x && x !== name))].join(", ");
+    const [lng, lat] = f.geometry.coordinates;
+    if (out.some((o) => o.name === name && o.detail === detail)) continue;
+    out.push({ name, detail, lat, lng });
+  }
+  return out.slice(0, limit);
+}
+
+/**
+ * Places for a stop (a museum, a café, an address), nearest to `near` first: the trip's
+ * destination, so "Hagia Sophia" finds the one in Istanbul. Only the typed text and that point are sent.
+ */
+export async function searchPlaces(q: string, near?: [number, number], signal?: AbortSignal): Promise<PlaceResult[]> {
+  const t = q.trim();
+  if (t.length < 2) return [];
+  const bias = near ? `&lat=${near[0].toFixed(3)}&lon=${near[1].toFixed(3)}` : "";
+  const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(t)}&limit=8&lang=en${bias}`, { signal });
+  if (!res.ok) return [];
+  const { features } = (await res.json()) as { features: PhotonFeature[] };
+  return pickPlaces(features);
+}

@@ -25,7 +25,7 @@ import { Back, MoreIcon, PeopleIcon } from "./icons";
 import { TripEditForm, TripMenu } from "./TripMenu";
 import { ShareSheet } from "./ShareSheet";
 import { DestinationMark } from "./Destination";
-import { destinationOf } from "@/lib/destination";
+import { destinationOf, tripPlace } from "@/lib/destination";
 
 const CARD_W = 380; // the stop card over the map on wide screens
 
@@ -89,6 +89,15 @@ export function TripScreen() {
   const tripMap = useMemo(() => (memory && trip ? recapMap(trip, legs) : undefined), [memory, trip, legs]);
   const openStopId = stopParam && rawStops.some((s) => s.id === stopParam) ? stopParam : undefined;
   const card = wide && !!openStopId; // on wide screens a stop opens as a card over the map
+
+  // Nothing on the map has a place: look at the destination, or, with no destination either,
+  // give the plan the screen and leave the map a strip.
+  const place = useMemo(() => (trip ? tripPlace(trip) : undefined), [trip]);
+  const nowhere = loaded && !!trip && !place;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (nowhere) setSnap((s) => (s === "half" ? "full" : s));
+  }, [nowhere]);
 
   // Escape closes the stop card.
   useEffect(() => {
@@ -186,6 +195,7 @@ export function TripScreen() {
         onSelect={tripMap ? (dayId) => goDay(trip.days.find((d) => d.id === dayId)!) : open}
         // With no sheet below (laptop), keep pins clear of the bottom edge and the map credit.
         padding={{ top: 80, bottom: sheetPx ? sheetPx + 24 : 64, left: card ? CARD_W + 40 : 56, right: 56 }}
+        center={place}
         className="absolute inset-0 min-[900px]:left-1/2"
         label={tripMap ? `Map of ${trip.name} as it happened` : `Map of ${day ? day.title || day.date : trip.name}`}
       />

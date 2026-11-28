@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cityRank, cleanPlaceName, pickCities, type PhotonFeature } from "./countries";
+import { cityRank, cleanPlaceName, pickCities, pickPlaces, type PhotonFeature } from "./countries";
 
 // Photon's answers (place layers), trimmed to what pickCities reads.
 const f = (name: string, type: string, tag: string, countrycode: string, state?: string): PhotonFeature => {
@@ -55,5 +55,17 @@ describe("cleanPlaceName", () => {
     expect(cleanPlaceName("Aarhus Kommune")).toBe("Aarhus");
     expect(cleanPlaceName("City of Edinburgh")).toBe("Edinburgh");
     expect(cleanPlaceName("Mexico City")).toBe("Mexico City");
+  });
+});
+
+describe("pickPlaces", () => {
+  const place = (props: Record<string, string>): PhotonFeature => ({ geometry: { coordinates: [28.98, 41.01] }, properties: props });
+  it("names a place and says where it is", () => {
+    const r = pickPlaces([place({ name: "Hagia Sophia", street: "Ayasofya Meydanı", housenumber: "1", district: "Cankurtaran", city: "Fatih", country: "Türkiye" })]);
+    expect(r).toEqual([{ name: "Hagia Sophia", detail: "Ayasofya Meydanı 1, Cankurtaran, Fatih, Türkiye", lat: 41.01, lng: 28.98 }]);
+  });
+  it("uses the address when a result has no name, and drops repeats", () => {
+    const r = pickPlaces([place({ street: "Nyhavn", housenumber: "17", city: "Copenhagen" }), place({ street: "Nyhavn", housenumber: "17", city: "Copenhagen" })]);
+    expect(r).toEqual([{ name: "Nyhavn 17", detail: "Copenhagen", lat: 41.01, lng: 28.98 }]);
   });
 });

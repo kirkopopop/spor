@@ -8,7 +8,11 @@ import type { Expense, Note, Stop, Trip } from "./types";
 export type StopPatch = Partial<Pick<Stop, "time" | "pickedOptionId" | "doneAt">>;
 
 /** What the in-app stop form can set; everything else on a stop stays Claude's. */
-export type StopDraft = { id: string; dayId: string; time: string; name: string; kind: Stop["kind"]; body?: string; more?: string };
+export type StopDraft = {
+  id: string; dayId: string; time: string; name: string; kind: Stop["kind"]; body?: string; more?: string;
+  // Where it is: set or cleared (null) from the form; left out, the stop keeps its place.
+  lat?: number | null; lng?: number | null;
+};
 
 type OpBase = { id: string; tripId: string; at: number }; // at: ms since epoch, for ordering
 
@@ -59,9 +63,10 @@ export function applyOps(trip: Trip, ops: Op[]): Trip {
         const at = findStop(stop.id);
         const previous = at ? at.day.stops[at.i] : undefined;
         if (at) at.day.stops.splice(at.i, 1);
-        const { dayId: _dayId, ...fields } = stop;
+        const { dayId: _dayId, lat, lng, ...fields } = stop;
         void _dayId;
-        target.stops.push({ ...previous, ...fields });
+        const place = "lat" in stop ? { lat: lat ?? undefined, lng: lng ?? undefined } : {};
+        target.stops.push({ ...previous, ...fields, ...place });
         touched.add(target.id);
         break;
       }

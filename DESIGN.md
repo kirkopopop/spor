@@ -338,7 +338,7 @@ Rhythm: 8px between chips and pills, 12px between form fields, 48px minimum row 
 
 ### Named Rules
 
-**The Map Owns the Top Rule.** On a trip, the map is always the top of the screen and the plan is always a sheet over it; content never pushes the map off-screen.
+**The Map Owns the Top Rule.** On a trip, the map is always the top of the screen and the plan is always a sheet over it; content never pushes the map off-screen. With no stop on the map it looks at the destination; with no destination either, the sheet opens full and the map stays a strip.
 
 **The Number Match Rule.** A stop's number in the list and its pin on the map are the same number and the same tone. Tapping either opens that stop.
 
@@ -368,7 +368,7 @@ On the map, three line styles tell the truth about a leg: a routed walk is a 2.5
 Tactile and plain: filled, rounded, no outlines, a quiet 0.98 press.
 - **Shape:** 12px radius for full-width form buttons; full pills for inline calls to action; 16px for the four-up action buttons; full circles for round controls.
 - **Primary:** Route Blue fill, white 16px semibold text, 48px tall, full width (Save, Add, Create trip). The inline pill version is 15px semibold with a 17px icon, 8px by 16px ("Plan with Claude").
-- **Action buttons:** a four-column grid of 60px tiles on a stop: icon over a 12px label. "Directions" is the one blue tile; Earlier (−15), Later (+15) and Edit sit on Soft Fill.
+- **Action buttons:** a four-column grid of 60px tiles on a stop: icon over a 12px label. "Directions" is the one blue tile, shown only when the stop has a place; Earlier (−15), Later (+15) and Edit sit on Soft Fill.
 - **Round controls:** 40px white circles with the Float shadow over the map (back); 36px blue circle with the Float shadow for "new trip"; 48px blue circle for directions in Today.
 - **Text buttons:** 15px medium in Route Blue ("Add stop", "Day", "Show 2 earlier stops"); destructive ones in Danger Red.
 - **Press / Focus:** every tappable element scales to 0.98 and drops to 88% opacity over 140ms (cubic-bezier(0.2, 0.8, 0.2, 1)). Focus is a 2px Route Blue outline at 2px offset with an 8px radius. Disabled is 40% opacity.

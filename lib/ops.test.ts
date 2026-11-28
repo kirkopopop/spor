@@ -109,6 +109,17 @@ describe("applyOps: stops added, edited and removed in the app", () => {
     expect(out.days[0].stops[1].options).toHaveLength(1);
   });
 
+  it("sets, keeps and clears a stop's place", () => {
+    const set = applyOps(two, [base({ kind: "stop.upsert", stop: { id: "a", dayId: "d", time: "10:00", name: "A", kind: "normal", lat: 41.01, lng: 28.98 } })]);
+    expect(set.days[0].stops[0]).toMatchObject({ lat: 41.01, lng: 28.98 });
+    const placed = { ...two, days: set.days };
+    const kept = applyOps(placed, [base({ kind: "stop.upsert", stop: { id: "a", dayId: "d", time: "10:30", name: "A", kind: "normal" } })]);
+    expect(kept.days[0].stops[0]).toMatchObject({ lat: 41.01, lng: 28.98 });
+    const cleared = applyOps(placed, [base({ kind: "stop.upsert", stop: { id: "a", dayId: "d", time: "10:00", name: "A", kind: "normal", lat: null, lng: null } })]);
+    expect(cleared.days[0].stops[0].lat).toBeUndefined();
+    expect(opToRpc(base({ kind: "stop.upsert", stop: { id: "a", dayId: "d", time: "10:00", name: "A", kind: "normal", lat: null, lng: null } })).p_payload).toMatchObject({ lat: null, lng: null });
+  });
+
   it("moves a stop to another day", () => {
     const out = applyOps(two, [base({ kind: "stop.upsert", stop: { id: "a", dayId: "d2", time: "09:00", name: "A", kind: "normal" } })]);
     expect(out.days[0].stops.map((s) => s.id)).toEqual(["b"]);
