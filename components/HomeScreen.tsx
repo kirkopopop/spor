@@ -13,6 +13,7 @@ import { OverviewGlobe } from "./OverviewGlobe";
 import { DestinationMark, DestinationPhoto, LandmarkIcon, TripTile } from "./Destination";
 import { destinationOf } from "@/lib/destination";
 import { ChatIcon } from "./icons";
+import { TravelCard } from "./TravelStats";
 
 /** Overview: every trip at a glance, the next one first. */
 export function HomeScreen() {
@@ -61,6 +62,7 @@ export function HomeScreen() {
       }
     >
       {next ? <NextTrip trip={next} live={groups.now.includes(next)} myName={myName} /> : <EmptyNext />}
+      <TravelCard today={today} />
 
       {later.length > 0 && <TripGroup title="Upcoming" trips={later} />}
       {groups.ideas.length > 0 && <TripGroup title="Ideas" trips={groups.ideas} />}

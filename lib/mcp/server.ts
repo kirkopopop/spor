@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import * as z from "zod";
 import { rowsToTrip, TRIP_SELECT, type TripRow } from "@/lib/db";
 import { validateDays, validateStops, type TripContext } from "./validate";
+import airportRows from "@/assets/geo/airports.json";
+import { flightBetween, type Airport } from "@/lib/flights";
 
 // tur's tools for Claude. Every call runs as the signed-in person through RLS,
 // so Claude sees and changes exactly what they could in the app. Writes are
@@ -44,6 +46,8 @@ const stopInput = z.object({
   pick_one: z.boolean().optional().describe("true turns options into a 'Pick one' choice for the travellers"),
   sort: z.number().int().optional(),
 });
+
+const AIRPORTS = new Map((airportRows as unknown as Airport[]).map((a) => [a[0], a]));
 
 const ok = (value: unknown) => ({ content: [{ type: "text" as const, text: JSON.stringify(value, null, 1) }] });
 const fail = (errors: string[]) => ({
@@ -417,6 +421,94 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       const { error } = await sb.from("notes").insert({ trip_id, body, stop_id: stop_id ?? null, day_id: dayId ?? null, via: "claude" });
       if (error) return fail([error.message]);
       return ok({ saved: true, revision: await revisionOf(trip_id) });
+    },
+  );
+
+  server.registerTool(
+    "list_flights",
+    {
+      title: "List flights",
+      description:
+        "Every flight the household has logged for travel stats: id, who, date, from and to (IATA), km, air time in minutes (null = estimated from distance).",
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const [{ data, error }, { data: members }] = await Promise.all([
+        sb.from("flights").select("id, user_id, flown_on, from_code, to_code, km, minutes").order("flown_on"),
+        sb.from("household_members").select("user_id, display_name"),
+      ]);
+      if (error) return fail([error.message]);
+      const names = new Map((members ?? []).map((m) => [m.user_id, m.display_name]));
+      return ok(
+        (data ?? []).map((f) => ({ id: f.id, who: names.get(f.user_id) ?? "someone", date: f.flown_on, from: f.from_code, to: f.to_code, km: f.km, minutes: f.minutes })),
+      );
+    },
+  );
+
+  server.registerTool(
+    "log_flights",
+    {
+      title: "Log flights",
+      description:
+        "Add flights to the travellers' travel stats (flights, air time, km, countries flown to). Log each leg of a connection separately, one row per person per leg. Call list_flights first so a flight isn't logged twice. Use when a flight is booked or the travellers tell you about past flights.",
+      inputSchema: {
+        flights: z
+          .array(
+            z.object({
+              date: DATE.describe("Departure date, local"),
+              from: z.string().regex(/^[A-Za-z]{3}$/).describe("IATA airport code, e.g. CPH"),
+              to: z.string().regex(/^[A-Za-z]{3}$/),
+              minutes: z.number().int().min(1).max(1440).optional().describe("Scheduled air time; omit to estimate from distance"),
+              people: z.array(z.string()).optional().describe("First names of who flew; defaults to the signed-in person"),
+            }),
+          )
+          .min(1)
+          .max(100),
+      },
+    },
+    async ({ flights }) => {
+      const { data: members } = await sb.from("household_members").select("user_id, display_name");
+      const first = (n: string) => n.trim().toLowerCase().split(/\s+/)[0];
+      const byName = (n: string) => (members ?? []).find((m) => first(m.display_name) === first(n))?.user_id as string | undefined;
+      const errors: string[] = [];
+      const rows = flights.flatMap((f, i) => {
+        const from = AIRPORTS.get(f.from.toUpperCase());
+        const to = AIRPORTS.get(f.to.toUpperCase());
+        if (!from) errors.push(`flight ${i + 1}: no airport ${f.from}`);
+        if (!to) errors.push(`flight ${i + 1}: no airport ${f.to}`);
+        const who: [string, string | undefined][] = f.people?.length ? f.people.map((p) => [p, byName(p)]) : [["you", userId]];
+        for (const [p, id] of who) if (!id) errors.push(`flight ${i + 1}: ${p} is not in the household`);
+        if (!from || !to) return [];
+        const between = flightBetween(from, to);
+        return who.map(([, id]) => ({
+          user_id: id,
+          flown_on: f.date,
+          from_code: between.from,
+          to_code: between.to,
+          from_country: between.fromCountry,
+          to_country: between.toCountry,
+          km: between.km,
+          minutes: f.minutes ?? null,
+        }));
+      });
+      if (errors.length) return fail(errors);
+      const { data, error } = await sb.from("flights").insert(rows).select("id");
+      return error ? fail([error.message]) : ok({ saved: data?.length ?? 0 });
+    },
+  );
+
+  server.registerTool(
+    "remove_flight",
+    {
+      title: "Remove a flight",
+      description: "Remove a logged flight by id (from list_flights), e.g. one logged twice or cancelled.",
+      inputSchema: { id: z.string().uuid() },
+      annotations: { destructiveHint: true },
+    },
+    async ({ id }) => {
+      const { data, error } = await sb.from("flights").delete().eq("id", id).select("id");
+      if (error) return fail([error.message]);
+      return data?.length ? ok({ removed: true }) : fail([`flight ${id} not found (use list_flights)`]);
     },
   );
 

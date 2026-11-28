@@ -127,7 +127,7 @@ export function PlacesSheet({ me, logged, been }: { me?: string; logged: Place[]
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[16px] font-semibold">{c.name}</span>
                 {c.fromTrip ? (
-                  <span className="text-[13px] text-muted">From a trip</span>
+                  <span className="text-[13px] text-muted">From a trip or flight</span>
                 ) : (
                   // Removing a country takes the cities you logged in it along.
                   <RemoveButton label={`Remove ${c.name}`} onClick={() => remove(mine.filter((m) => m.country === c.code && m.id).map((m) => m.id!))} />

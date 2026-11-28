@@ -11,6 +11,7 @@ export type Place = {
   lat?: number;
   lng?: number;
   fromTrip?: string; // the trip's name, when it was counted from one
+  fromFlight?: boolean; // a country flown to (lib/flights.ts)
 };
 
 export type Been = { countries: Set<string>; cities: Place[] };

@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Trip } from "@/lib/types";
 import { dateRange, daysUntil } from "@/lib/format";
 import { destinationOf, tripPlace } from "@/lib/destination";
 import { tripRoutes } from "@/lib/tripView";
-import { beenBy, beenShading, tripPlaces, type Been } from "@/lib/places";
-import { addPlace, removePlaces, usePlaces } from "@/lib/placesStore";
+import { beenShading, tripPlaces } from "@/lib/places";
+import { flightPlaces } from "@/lib/flights";
+import { addPlace, removePlaces } from "@/lib/placesStore";
 import { useHousehold } from "@/lib/store";
+import { useTravel } from "@/lib/useTravel";
 import { Globe, type GlobeBeen, type GlobePin } from "./map/Globe";
 import { TripTile } from "./Destination";
 import { PlacesSheet } from "./PlacesSheet";
@@ -26,8 +28,8 @@ const EVERYONE = "everyone";
  * log it.
  */
 export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; today: string; focus?: Trip; stats?: React.ReactNode }) {
-  const { members, me } = useHousehold();
-  const { rows } = usePlaces();
+  const { members } = useHousehold();
+  const { people, me, rows, beenOf, flightsOf } = useTravel(today);
   const all = useMemo<GlobePin[]>(
     () =>
       trips.flatMap((t) => {
@@ -44,19 +46,6 @@ export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; t
   const [toast, setToast] = useState<{ text: string; undo?: () => void }>();
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Each person's places: what they logged plus their ended trips (matched by first name).
-  const people = useMemo(() => (members.length ? members : [{ userId: me ?? "", name: "" }]), [members, me]);
-  const beenByUser = useMemo(
-    () =>
-      new Map(
-        people.map((p) => {
-          const name = members.find((m) => m.userId === p.userId)?.name;
-          return [p.userId, beenBy(p.userId || undefined, rows, tripPlaces(trips, today, name))] as const;
-        }),
-      ),
-    [people, members, rows, trips, today],
-  );
-  const beenOf = useCallback((userId?: string): Been => beenByUser.get(userId ?? "") ?? { countries: new Set(), cities: [] }, [beenByUser]);
   const shownPerson = person ?? me;
   const mine = beenOf(me);
 
@@ -97,12 +86,12 @@ export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; t
       } else if (
         countryRow?.id &&
         logged.length === 1 &&
-        !tripPlaces(trips, today, members.find((m) => m.userId === me)?.name).some((p) => p.country === iso)
+        ![...tripPlaces(trips, today, members.find((m) => m.userId === me)?.name), ...flightPlaces(flightsOf(me))].some((p) => p.country === iso)
       ) {
         await removePlaces([countryRow.id]);
         say(`Removed ${name}`, () => addPlace({ kind: "country", country: iso, name }, me));
       } else {
-        say(`${name} comes from a trip or a city. Change it in Places.`);
+        say(`${name} comes from a trip, a flight or a city. Change it in Places.`);
       }
     } catch (e) {
       say(e instanceof Error ? e.message : "Couldn't change that place.");
