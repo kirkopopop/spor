@@ -29,7 +29,7 @@ The travellers also edit tur by hand (pick options, tick stops, move times, add 
 
 Order matters, because stops point at bookings and days:
 
-1. **New trip:** `create_trip` with name, dates, the destination's IANA timezone, currency, everyone's first names, stage `planning`. Days are created for each date. **Existing trip:** use its id; change dates or stage with `update_trip`.
+1. **New trip:** `create_trip` with name, dates, the destination's IANA timezone, currency, everyone's first names, stage `planning`. Days are created for each date. **Existing trip:** use its id; change dates or stage with `update_trip`. Delete a whole trip (`delete_trip`, owner only) only when the person asks for that trip by name.
    Name the trip after where it goes ("Munich", "Lisbon & Porto", "Edinburgh weekend"), not the occasion ("Christmas break"): tur reads the destination from the name to give the trip its landmark icon and photo, then falls back to the days' `city`/`place`, and only last to the timezone.
 2. **`upsert_bookings`**: one row per thing to book or already booked (flights, every hotel stay, timed tickets, restaurant tables). `status` is `booked` only if it really is. One-line `note`, `est_cost` when known. Booking references go in `private_ref`, never in stop text. Keep the returned ids.
 3. **`upsert_days`**: for each date a `title` of at most 40 characters (the day's shape: "Arrive · Altstadt", "Zugspitze day"), `city` as a lowercase slug ("munich") that the spare ideas will share, `place` (what shows under the date tab, e.g. "Munich" or "Munich → Garmisch"), a short `intro`, and a `rain` plan of 1–3 sentences saying what to swap if it is wet. Always fill `city` and `place`: they also tell tur where the trip goes.

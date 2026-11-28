@@ -100,6 +100,13 @@ export const ChevronRight = (p: P) => (
     <path d="m9 6 6 6-6 6" />
   </Svg>
 );
+export const MoreIcon = (p: P) => (
+  <Svg {...p}>
+    <circle cx="5.5" cy="12" r="1.3" fill="currentColor" />
+    <circle cx="12" cy="12" r="1.3" fill="currentColor" />
+    <circle cx="18.5" cy="12" r="1.3" fill="currentColor" />
+  </Svg>
+);
 export const PeopleIcon = (p: P) => (
   <Svg {...p}>
     <circle cx="9" cy="8" r="3.2" />

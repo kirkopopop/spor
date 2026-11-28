@@ -39,8 +39,9 @@ export default function Privacy() {
       </Section>
 
       <Section title="Your choices">
-        You can change your name, remove trips you own, leave trips shared with you, and delete your account in Settings. Deleting
-        your account removes your sign-in, the trips you own, your flights and your places.
+        From a trip&apos;s ⋯ menu you can delete a trip you own, which removes it with its days, stops, bookings, budget, expenses and
+        notes for everyone it&apos;s shared with, or leave a trip shared with you. In Settings you can change your name and delete your
+        account, which removes your sign-in, the trips you own, your flights and your places.
       </Section>
 
       <Section title="Contact">

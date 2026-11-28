@@ -21,7 +21,8 @@ import { StopDetail } from "./StopDetail";
 import { BookTab, MoneyTab, NotesTab } from "./TripTabs";
 import { Sheet } from "./Sheet";
 import { StopForm } from "./Forms";
-import { Back, PeopleIcon } from "./icons";
+import { Back, MoreIcon, PeopleIcon } from "./icons";
+import { TripEditForm, TripMenu } from "./TripMenu";
 import { ShareSheet } from "./ShareSheet";
 import { DestinationMark } from "./Destination";
 import { destinationOf } from "@/lib/destination";
@@ -30,7 +31,8 @@ const CARD_W = 380; // the stop card over the map on wide screens
 
 export type Tab = "today" | "memory" | "plan" | "book" | "money" | "notes";
 const LABEL: Record<Tab, string> = { today: "Today", memory: "Memory", plan: "Plan", book: "Bookings", money: "Money", notes: "Notes" };
-type Modal = { kind: "stop-form"; stopId?: string } | { kind: "rain" } | { kind: "share" };
+type Modal = { kind: "stop-form"; stopId?: string } | { kind: "rain" } | { kind: "share" } | { kind: "menu" } | { kind: "edit" };
+const MODAL_LABEL: Record<Modal["kind"], string> = { "stop-form": "Stop", rain: "If it rains", share: "Share trip", menu: "Trip options", edit: "Edit trip" };
 
 /** A trip: the map on top, the plan in a sheet over it. Tab, day and open stop live in the address. */
 export function TripScreen() {
@@ -135,10 +137,17 @@ export function TripScreen() {
         <button
           onClick={() => setModal({ kind: "share" })}
           aria-label={sharedWith ? `Shared with ${sharedWith} ${sharedWith === 1 ? "person" : "people"}` : "Share trip"}
-          className="press -mr-1 flex h-9 shrink-0 items-center gap-1 rounded-full bg-soft px-3 text-[14px] font-medium text-ink-2"
+          className="press flex h-9 shrink-0 items-center gap-1 rounded-full bg-soft px-3 text-[14px] font-medium text-ink-2"
         >
           <PeopleIcon size={17} />
           {sharedWith > 0 ? sharedWith + 1 : "Share"}
+        </button>
+        <button
+          onClick={() => setModal({ kind: "menu" })}
+          aria-label="Trip options"
+          className="press -mr-1 flex size-9 shrink-0 items-center justify-center rounded-full bg-soft text-ink-2"
+        >
+          <MoreIcon size={20} />
         </button>
       </div>
       <p className="mt-0.5 truncate text-[14px] text-muted">
@@ -252,8 +261,10 @@ export function TripScreen() {
         </aside>
       )}
 
-      <Sheet open={!!modal} onClose={() => setModal(undefined)} label={modal?.kind === "rain" ? "If it rains" : modal?.kind === "share" ? "Share trip" : "Stop"}>
+      <Sheet open={!!modal} onClose={() => setModal(undefined)} label={modal ? MODAL_LABEL[modal.kind] : "Stop"}>
         {modal?.kind === "share" && <ShareSheet trip={trip} />}
+        {modal?.kind === "menu" && <TripMenu trip={trip} onEdit={() => setModal({ kind: "edit" })} />}
+        {modal?.kind === "edit" && <TripEditForm trip={trip} onDone={() => window.history.back()} />}
         {modal?.kind === "stop-form" && day && (
           <StopForm
             key={modal.stopId ?? "new"}

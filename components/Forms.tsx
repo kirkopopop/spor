@@ -11,7 +11,7 @@ export const field = "h-12 w-full rounded-xl border border-line bg-card px-4 tex
 export const primaryButton = "press h-12 w-full rounded-xl bg-accent text-[16px] font-semibold text-on-fill disabled:opacity-40";
 const TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
-function Segmented<T extends string>({ value, options, onChange, label }: {
+export function Segmented<T extends string>({ value, options, onChange, label }: {
   value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string;
 }) {
   return (

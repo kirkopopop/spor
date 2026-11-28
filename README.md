@@ -39,7 +39,7 @@ Supabase Auth is the OAuth server; tools run as the signed-in person, so RLS app
    allow dynamic client registration.
 3. claude.ai → Settings → Connectors → Add custom connector → `https://spor-pi.vercel.app/api/mcp`.
 
-Tools: `list_trips`, `get_trip`, `get_activity_since`, `create_trip`, `update_trip`, `upsert_days`,
+Tools: `list_trips`, `get_trip`, `get_activity_since`, `create_trip`, `update_trip`, `delete_trip`, `upsert_days`,
 `upsert_stops`, `delete_stops`, `upsert_bookings`, `set_budget`, `upsert_spare_ideas`, `add_note`.
 Every write passes the `expected_revision` it last read; if anyone changed the trip since, the write is
 refused and Claude re-reads first. The skill Claude follows is in `skills/tur-planning/`

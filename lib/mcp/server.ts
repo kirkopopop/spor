@@ -245,6 +245,25 @@ export function buildServer(sb: SupabaseClient, userId: string) {
   );
 
   server.registerTool(
+    "delete_trip",
+    {
+      title: "Delete trip",
+      description:
+        "Permanently delete a trip the signed-in person owns, with its days, stops, bookings, budget, expenses and notes, for everyone it's shared with. Only when the person explicitly asks to delete that trip; confirm its name with them first. Someone who doesn't own the trip can leave it in tur instead.",
+      inputSchema: { trip_id: z.string().uuid(), expected_revision: REVISION },
+      annotations: { destructiveHint: true },
+    },
+    async ({ trip_id, expected_revision }) => {
+      const ctx = await context(trip_id, expected_revision);
+      if (typeof ctx === "string") return fail([ctx]);
+      const { data, error } = await sb.from("trips").delete().eq("id", trip_id).select("id, name");
+      if (error) return fail([error.message]);
+      if (!data?.length) return fail(["only the trip's owner can delete it; they can leave it in tur instead"]);
+      return ok({ deleted: data[0].name });
+    },
+  );
+
+  server.registerTool(
     "upsert_days",
     {
       title: "Set days",

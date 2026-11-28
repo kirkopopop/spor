@@ -9,6 +9,7 @@ import { applyTheme, readThemePref, type ThemePref } from "./theme";
 import { hasSupabase } from "./supabase/env";
 import { supabase } from "./supabase/client";
 import { canEdit } from "./access";
+import { patchToRow, planDates, type TripPatch } from "./tripEdit";
 import type { Expense, Member, Note, Role, Trip } from "./types";
 
 /**
@@ -262,6 +263,48 @@ export async function createTrip(input: { name: string; startDate?: string; endD
   }
   await sync();
   return trip.id as string;
+}
+
+const tripError = (e: { message: string }, offline: string) =>
+  new Error(typeof navigator !== "undefined" && !navigator.onLine ? offline : e.message.charAt(0).toUpperCase() + e.message.slice(1) + ".");
+
+/**
+ * Renames a trip or changes its dates, stage or currency. Needs a connection.
+ * New dates add empty days and remove the days outside them, stops and all:
+ * the caller asks first when any of those days has stops (planDates().lost).
+ */
+export async function updateTrip(tripId: string, patch: TripPatch) {
+  if (!hasSupabase) throw new Error("Sign in to change trips.");
+  const trip = state.snapshots.find((t) => t.id === tripId);
+  if (!trip) throw new Error("Trip not found.");
+  const sb = supabase();
+  const offline = "Changing a trip needs a connection.";
+  const datesChange = patch.startDate !== undefined || patch.endDate !== undefined;
+  const plan = datesChange ? planDates(applyOps(trip, state.outbox), patch.startDate ?? trip.startDate, patch.endDate ?? trip.endDate) : undefined;
+  const { error } = await sb.from("trips").update(patchToRow(patch)).eq("id", tripId);
+  if (error) throw tripError(error, offline);
+  if (plan?.add.length) {
+    const { error: aErr } = await sb
+      .from("days")
+      .upsert(plan.add.map((date) => ({ trip_id: tripId, date })), { onConflict: "trip_id,date", ignoreDuplicates: true });
+    if (aErr) throw tripError(aErr, offline);
+  }
+  if (plan?.drop.length) {
+    const { error: dErr } = await sb.from("days").delete().eq("trip_id", tripId).in("id", plan.drop.map((d) => d.id));
+    if (dErr) throw tripError(dErr, offline);
+  }
+  await sync();
+}
+
+/** The owner deletes a trip, with everything in it, for everyone on it. Needs a connection. */
+export async function deleteTrip(tripId: string) {
+  if (!hasSupabase) throw new Error("Sign in to delete trips.");
+  const { data, error } = await supabase().from("trips").delete().eq("id", tripId).select("id");
+  if (error) throw tripError(error, "Deleting a trip needs a connection.");
+  if (!data?.length) throw new Error("Only the trip's owner can delete it.");
+  setState({ snapshots: state.snapshots.filter((t) => t.id !== tripId), outbox: state.outbox.filter((o) => o.tripId !== tripId) });
+  await persist();
+  await sync();
 }
 
 // ── Sharing: each change needs a connection and refreshes the trip ────

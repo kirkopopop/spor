@@ -396,7 +396,7 @@ function Highlights({ cities, home }: { cities: { name: string; country: string;
           </li>
         ))}
       </ul>
-      <p className="mt-1.5 px-1 text-[12px] text-faint">City sizes are metro populations from Natural Earth; cities it doesn't list aren't sized.</p>
+      <p className="mt-1.5 px-1 text-[12px] text-faint">City sizes are metro populations from Natural Earth; cities it doesn&apos;t list aren&apos;t sized.</p>
     </section>
   );
 }

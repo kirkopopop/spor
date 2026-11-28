@@ -30,6 +30,9 @@ export const dayTab = (iso: string) => {
   return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()}`;
 };
 
+/** "Sat 28 Nov" */
+export const dayMonth = (iso: string) => `${dayTab(iso)} ${MONTHS[parse(iso).getUTCMonth()]}`;
+
 /** Today's date (YYYY-MM-DD) where the trip is, whatever the phone's clock zone. */
 export const todayIn = (timeZone: string, now = new Date()) =>
   new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
