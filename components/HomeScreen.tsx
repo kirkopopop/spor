@@ -5,8 +5,8 @@ import Link from "next/link";
 import journey from "@/assets/photos/journey.jpg";
 import { useMemo } from "react";
 import { usePeople, useTrips } from "@/lib/store";
-import { dateRange, daysUntil, money, monthYear, openPicks, plannedTotal, todayIn, toBookCount } from "@/lib/format";
-import { groupTrips } from "@/lib/tripView";
+import { dateRange, daysUntil, monthYear, todayIn } from "@/lib/format";
+import { groupTrips, tripCardChips } from "@/lib/tripView";
 import type { Trip } from "@/lib/types";
 import { Group, Row, Screen } from "./shell/TabBar";
 import { OverviewGlobe } from "./OverviewGlobe";
@@ -73,9 +73,6 @@ export function HomeScreen() {
 
 function NextTrip({ trip, live, myName }: { trip: Trip; live: boolean; myName?: string }) {
   const days = daysUntil(trip.startDate, trip.timezone);
-  const toBook = toBookCount(trip);
-  const picks = openPicks(trip);
-  const planned = plannedTotal(trip);
   const empty = trip.days.every((d) => d.stops.length === 0);
   const others = trip.people.filter((p) => p !== myName);
 
@@ -141,12 +138,11 @@ function NextTrip({ trip, live, myName }: { trip: Trip; live: boolean; myName?: 
             Plan with Claude
           </a>
         ) : (
-          <>
-            {toBook > 0 && <Chip tone="fixed">{toBook} to book</Chip>}
-            {picks > 0 && <Chip>{picks} picks open</Chip>}
-            {planned > 0 && <Chip>{money(planned, trip.currency)} planned</Chip>}
-            {toBook === 0 && picks === 0 && <Chip tone="ok">All booked</Chip>}
-          </>
+          tripCardChips(trip, live ? "live" : "planning", todayIn(trip.timezone)).map((c) => (
+            <Chip key={c.text} tone={c.tone}>
+              {c.text}
+            </Chip>
+          ))
         )}
       </div>
     </section>

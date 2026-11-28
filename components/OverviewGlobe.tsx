@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import type { Trip } from "@/lib/types";
 import { dateRange, daysUntil } from "@/lib/format";
 import { destinationOf, tripPlace } from "@/lib/destination";
-import { tripRoutes } from "@/lib/tripView";
+import { tripRoutes, tripStage } from "@/lib/tripView";
 import { beenShading, tripPlaces } from "@/lib/places";
 import { flightPlaces } from "@/lib/flights";
 import { addPlace, removePlaces } from "@/lib/placesStore";
@@ -18,13 +18,14 @@ import { PlacesSheet } from "./PlacesSheet";
 import { Sheet } from "./Sheet";
 import { Chevron, Plus } from "./icons";
 
-type Filter = "all" | "planned" | "done" | "been";
-const LABEL: Record<Filter, string> = { all: "All", planned: "Planned", done: "Done", been: "Been" };
+type Filter = "all" | "planning" | "live" | "memory" | "been";
+const LABEL: Record<Filter, string> = { all: "All", planning: "Planning", live: "Live", memory: "Memory", been: "Been" };
+const STAGE_FILTERS = ["planning", "live", "memory"] as const;
 const EVERYONE = "everyone";
 
 /**
  * Your world: every trip you're on, with a place on a globe you can turn, and the places each
- * person has been. Filter to what's planned, done or been; tap a pin for the trip, a country to
+ * person has been. Filter by stage (Planning, Live, Memory) or to Been; tap a pin for the trip, a country to
  * log it.
  */
 export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; today: string; focus?: Trip; stats?: React.ReactNode }) {
@@ -35,8 +36,8 @@ export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; t
     () =>
       trips.flatMap((t) => {
         const at = tripPlace(t);
-        const done = t.stage === "memory" || (!!t.endDate && t.endDate < today);
-        return at ? [{ id: t.id, lat: at[0], lng: at[1], destination: destinationOf(t), done, name: t.name }] : [];
+        const stage = tripStage(t, today);
+        return at ? [{ id: t.id, lat: at[0], lng: at[1], destination: destinationOf(t), done: stage === "memory", stage, name: t.name }] : [];
       }),
     [trips, today],
   );
@@ -50,7 +51,7 @@ export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; t
   const shownPerson = person ?? me;
   const mine = beenOf(me);
 
-  const pins = useMemo(() => (filter === "been" ? [] : filter === "all" ? all : all.filter((p) => (filter === "done" ? p.done : !p.done))), [all, filter]);
+  const pins = useMemo(() => (filter === "been" ? [] : filter === "all" ? all : all.filter((p) => p.stage === filter)), [all, filter]);
   const routes = useMemo(
     () =>
       tripRoutes(
@@ -100,8 +101,9 @@ export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; t
   }
 
   const selected = trips.find((t) => t.id === selectedId && pins.some((p) => p.id === t.id));
-  const count = (f: Filter) => (f === "been" ? mine.countries.size : f === "all" ? all.length : all.filter((p) => (f === "done" ? p.done : !p.done)).length);
-  const filters: Filter[] = all.length ? ["all", "planned", "done", "been"] : ["been"];
+  const count = (f: Filter) => (f === "been" ? mine.countries.size : f === "all" ? all.length : all.filter((p) => p.stage === f).length);
+  // Only the stages that have a trip, so the pill stays short.
+  const filters: Filter[] = all.length ? ["all", ...STAGE_FILTERS.filter((s) => count(s) > 0), "been"] : ["been"];
   const firstName = (userId: string) => (userId === me ? "Me" : (members.find((m) => m.userId === userId)?.name ?? "").split(" ")[0]);
 
   return (
@@ -246,10 +248,11 @@ function Segmented({
 
 /** One line for the selected trip: when it is, in the terms that matter for its stage. */
 function when(t: Trip, today: string) {
-  if (!t.startDate) return "Idea · no dates yet";
+  const stage = tripStage(t, today);
+  if (stage === "idea") return "Idea · no dates yet";
   const range = dateRange(t.startDate, t.endDate);
-  if (t.stage === "memory" || t.endDate < today) return `${range} ${t.startDate.slice(0, 4)} · Memory`;
-  if (t.startDate <= today) return `Happening now · ${range}`;
+  if (stage === "memory") return `${range} ${t.startDate.slice(0, 4)} · Memory`;
+  if (stage === "live") return `Live · ${range}`;
   const days = daysUntil(t.startDate, t.timezone);
   return `In ${days} ${days === 1 ? "day" : "days"} · ${range}`;
 }

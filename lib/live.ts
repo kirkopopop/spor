@@ -42,3 +42,19 @@ export function nowNext(stops: Stop[], now: string) {
   const nextFixed = next ? stops.slice(nextIndex + 1).find((s) => s.kind === "fixed") : undefined;
   return { current, next, nextFixed, earlier: stops.slice(0, Math.max(0, cut - 1)) };
 }
+
+/** How long the last stop of the day counts as "now" before the day is done (stops have no end time). */
+export const LAST_STOP_MIN = 90;
+
+/**
+ * What the Today card leads with, one at a time: nothing planned, the next stop,
+ * the last stop while you're at it, or done for today (after the last stop, or once it's ticked).
+ */
+export type DayStatus = "empty" | "next" | "last" | "done";
+export function dayStatus(stops: Stop[], now: string): DayStatus {
+  if (stops.length === 0) return "empty";
+  const { current, next } = nowNext(stops, now);
+  if (next) return "next";
+  if (current && !current.doneAt && minutesUntil(now, current.time) < LAST_STOP_MIN) return "last";
+  return "done";
+}

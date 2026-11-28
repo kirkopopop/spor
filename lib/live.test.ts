@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { minutesUntil, nowNext, tripClock } from "./live";
+import { dayStatus, minutesUntil, nowNext, tripClock } from "./live";
 import type { Stop, Trip } from "./types";
 
 const s = (id: string, time: string, kind: Stop["kind"] = "normal"): Stop => ({ id, time, name: id, kind });
@@ -55,5 +55,25 @@ describe("tripClock", () => {
 
   it("accepts a ?now= preview like 2026-12-22T13:10", () => {
     expect(tripClock(trip, new Date(), "2026-12-22T13:10")).toEqual({ date: "2026-12-22", time: "13:10", during: true });
+  });
+});
+
+describe("dayStatus", () => {
+  it("an empty day is empty, never done", () => {
+    expect(dayStatus([], "09:00")).toBe("empty");
+    expect(dayStatus([], "23:00")).toBe("empty");
+  });
+  it("is next while a stop is ahead", () => {
+    expect(dayStatus(day, "07:00")).toBe("next");
+    expect(dayStatus(day, "17:59")).toBe("next");
+  });
+  it("is the last stop for a while after it starts, then done", () => {
+    expect(dayStatus(day, "18:00")).toBe("last");
+    expect(dayStatus(day, "19:29")).toBe("last");
+    expect(dayStatus(day, "19:30")).toBe("done");
+  });
+  it("is done as soon as the last stop is ticked", () => {
+    const ticked = [...day.slice(0, -1), { ...day.at(-1)!, doneAt: "2026-12-22T18:40:00Z" }];
+    expect(dayStatus(ticked, "18:45")).toBe("done");
   });
 });

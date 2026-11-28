@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ExpressionSpecification, GeoJSONSource, Map as MlMap, Marker } from "maplibre-gl";
 import type { Destination } from "@/lib/destination";
+import type { Stage } from "@/lib/types";
+import { STAGE_LABEL } from "@/lib/tripEdit";
 import { token, useTheme } from "@/lib/theme";
 import { FLAGS, flagUrl } from "@/lib/flags";
 import { DestinationMark } from "../Destination";
@@ -12,7 +14,7 @@ import type { MapRoute } from "./TripMap";
 /** Places been, for the globe: countries shaded by how many of the people shown have been, city dots. */
 export type GlobeBeen = { shading: Record<string, number>; people: number; cities: { lat: number; lng: number; name: string; country: string }[] };
 
-export type GlobePin = { id: string; lat: number; lng: number; destination: Destination; done: boolean; name: string };
+export type GlobePin = { id: string; lat: number; lng: number; destination: Destination; done: boolean; stage?: Stage; name: string };
 
 const STYLE = { light: "https://tiles.openfreemap.org/styles/positron", dark: "https://tiles.openfreemap.org/styles/dark" };
 const SPIN = 2.4; // degrees of longitude per second while idle: a slow turn, west to east like the Earth
@@ -329,7 +331,7 @@ export function Globe({
               e.stopPropagation();
               onSelect(selected ? undefined : p.id);
             }}
-            aria-label={`${p.name}${p.done ? ", done" : ", planned"}`}
+            aria-label={`${p.name}, ${p.stage ? STAGE_LABEL[p.stage] : p.done ? "Memory" : "Planning"}`}
             aria-pressed={selected}
             className={`block rounded-[14px] bg-card p-[3px] shadow-[0_3px_10px_rgb(0_0_0/0.28)] ring-2 transition-transform duration-300 ease-[cubic-bezier(.34,1.56,.64,1)] ${
               p.done ? "ring-ok" : "ring-accent"

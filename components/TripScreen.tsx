@@ -211,7 +211,7 @@ export function TripScreen() {
             onEdit={() => setModal({ kind: "stop-form", stopId: openStop.id })}
           />
         ) : tab === "today" ? (
-          <LiveView trip={shown} preview={preview} numbers={numbers} onOpen={open} />
+          <LiveView trip={shown} preview={preview} numbers={numbers} onOpen={open} onAdd={canEdit ? () => setModal({ kind: "stop-form" }) : undefined} />
         ) : tab === "memory" ? (
           <Recap trip={shown} legs={legs} onDay={goDay} />
         ) : tab === "plan" ? (

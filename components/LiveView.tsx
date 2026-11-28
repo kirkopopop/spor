@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import type { Stop, Trip } from "@/lib/types";
 import { clockTime, dayTab, leaveBy, mapsSearch, money, showTime, travelMinutes } from "@/lib/format";
-import { minutesUntil, nowNext, tripClock } from "@/lib/live";
+import { dayStatus, minutesUntil, nowNext, tripClock } from "@/lib/live";
 import { spentOn } from "@/lib/money";
 import { editStop, useSyncStatus } from "@/lib/store";
-import { Check, Directions, MoneyIcon, NoteIcon } from "./icons";
+import { ChatIcon, Check, Directions, MoneyIcon, NoteIcon, Plus } from "./icons";
 import { Sheet } from "./Sheet";
 import { ExpenseForm, NoteForm } from "./Forms";
 
@@ -18,11 +18,13 @@ export function LiveView({
   preview,
   numbers,
   onOpen,
+  onAdd,
 }: {
   trip: Trip;
   preview?: string | null;
   numbers: Map<string, number>;
   onOpen: (stopId: string) => void;
+  onAdd?: () => void; // only for people who can edit
 }) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -38,6 +40,7 @@ export function LiveView({
   if (!day) return <p className="px-5 pt-2 text-[15px] text-muted">Nothing planned today.</p>;
 
   const { current, next, nextFixed, earlier } = nowNext(day.stops, clock.time);
+  const status = dayStatus(day.stops, clock.time);
   const visible = showEarlier ? day.stops : day.stops.filter((s) => !earlier.includes(s));
   const until = next ? minutesUntil(next.time, clock.time) : 0;
   const leave = next ? leaveBy(next) : undefined;
@@ -50,7 +53,7 @@ export function LiveView({
   return (
     <div className="px-5 pb-6">
       <div className="flex items-center justify-between text-[13px]">
-        <span className="font-medium text-muted">{dayTab(day.date)} · {day.title || day.place}</span>
+        <span className="font-medium text-muted">{[dayTab(day.date), day.title || day.place].filter(Boolean).join(" · ")}</span>
         <span role="status" className={`flex items-center gap-1.5 ${sync.online && !sync.pending ? "text-ok" : "text-muted"}`}>
           <span className={`size-1.5 rounded-full ${sync.online && !sync.pending ? "bg-ok" : "bg-faint"}`} />
           {!sync.online ? `Offline${sync.pending ? ` · ${sync.pending} to sync` : ""}` : sync.pending ? "Syncing…" : "Synced"}
@@ -58,8 +61,34 @@ export function LiveView({
       </div>
 
       <section aria-label="Next" className="mt-3 rounded-[20px] bg-bg p-4">
-        {current && <p className="truncate text-[14px] text-muted">Now · {current.name}</p>}
-        {next ? (
+        {status === "next" && current && <p className="truncate text-[14px] text-muted">Now · {current.name}</p>}
+        {status === "empty" ? (
+          <>
+            <p className="text-[17px] font-semibold">Nothing planned today</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {onAdd && (
+                <button onClick={onAdd} className="press inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-[15px] font-semibold text-on-fill">
+                  <Plus size={17} />
+                  Add stop
+                </button>
+              )}
+              <a
+                href={`https://claude.ai/new?q=${encodeURIComponent(`In tur, plan today on ${trip.name}: ${dayTab(day.date)} (${day.date}). Nothing is planned yet.`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="press inline-flex items-center gap-1.5 rounded-full bg-card px-4 py-2 text-[15px] font-medium text-ink-2"
+              >
+                <ChatIcon size={17} />
+                Ask Claude
+              </a>
+            </div>
+          </>
+        ) : status === "last" && current ? (
+          <button onClick={() => onOpen(current.id)} className="block w-full min-w-0 text-left">
+            <span className="block text-[14px] text-muted">Now</span>
+            <span className="mt-0.5 block text-[19px] leading-snug font-semibold tracking-[-0.01em]">{current.name}</span>
+          </button>
+        ) : next ? (
           <div className="mt-2 flex items-center gap-4">
             <button onClick={() => onOpen(next.id)} className="min-w-0 flex-1 text-left">
               <div className="tnum flex items-baseline gap-2">
