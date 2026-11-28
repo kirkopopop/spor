@@ -5,11 +5,12 @@ import { createPortal } from "react-dom";
 import type { ExpressionSpecification, GeoJSONSource, Map as MlMap, Marker } from "maplibre-gl";
 import type { Destination } from "@/lib/destination";
 import { token, useTheme } from "@/lib/theme";
+import { FLAGS, flagUrl } from "@/lib/flags";
 import { DestinationMark } from "../Destination";
 import type { MapRoute } from "./TripMap";
 
 /** Places been, for the globe: countries shaded by how many of the people shown have been, city dots. */
-export type GlobeBeen = { shading: Record<string, number>; people: number; cities: { lat: number; lng: number; name: string }[] };
+export type GlobeBeen = { shading: Record<string, number>; people: number; cities: { lat: number; lng: number; name: string; country: string }[] };
 
 export type GlobePin = { id: string; lat: number; lng: number; destination: Destination; done: boolean; name: string };
 
@@ -33,6 +34,7 @@ export function Globe({
   onSelect,
   focus,
   been,
+  cityMarks = "dot",
   onCountryTap,
   className = "",
 }: {
@@ -42,6 +44,7 @@ export function Globe({
   onSelect: (id: string | undefined) => void;
   focus?: [number, number]; // where to face first: the next trip
   been?: GlobeBeen; // shown when set
+  cityMarks?: "dot" | "flag"; // each city as a green dot or its country's flag
   onCountryTap?: (iso: string, name: string) => void;
   className?: string;
 }) {
@@ -187,7 +190,7 @@ export function Globe({
     if (!gen || readyGen !== gen || !m) return;
     const show = been ? "visible" : "none";
     if (!been) {
-      for (const id of ["been-fill", "been-line", "been-cities"]) if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", "none");
+      for (const id of ["been-fill", "been-line", "been-cities", "been-flags"]) if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", "none");
       return;
     }
     let alive = true;
@@ -206,6 +209,19 @@ export function Globe({
             type: "circle",
             source: "been-cities",
             paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 1, 2.5, 5, 4.5], "circle-color": token("ok"), "circle-stroke-color": token("card"), "circle-stroke-width": 1.5 },
+          });
+          // Flags: 72px images at pixel ratio 3, so 24px wide; smaller with the whole globe in view.
+          m.addLayer({
+            id: "been-flags",
+            type: "symbol",
+            source: "been-cities",
+            filter: ["==", ["get", "flag"], true],
+            layout: {
+              "icon-image": ["concat", "flag-", ["get", "country"]],
+              "icon-size": ["interpolate", ["linear"], ["zoom"], 1, 0.7, 5, 1],
+              "icon-allow-overlap": true,
+              "icon-ignore-placement": true,
+            },
           });
           m.on("click", "been-fill", (e) => {
             const p = e.features?.[0]?.properties as { iso?: string; name?: string } | undefined;
@@ -228,16 +244,41 @@ export function Globe({
       fill.push(0);
       m.setPaintProperty("been-fill", "fill-opacity", fill.length > 3 ? (fill as ExpressionSpecification) : 0);
       m.setPaintProperty("been-line", "line-opacity", all.length ? ["match", ["get", "iso"], all, 0.7, 0] : 0);
+      // Flags load the first time each country needs one; a city whose flag can't load keeps its dot.
+      const flagged = new Set<string>();
+      if (cityMarks === "flag") {
+        await Promise.all(
+          [...new Set(been.cities.map((c) => c.country))].map(async (iso) => {
+            if (!FLAGS.has(iso)) return;
+            const id = `flag-${iso}`;
+            if (!m.hasImage(id)) {
+              try {
+                const { data } = await m.loadImage(flagUrl(iso));
+                if (!m.hasImage(id)) m.addImage(id, data, { pixelRatio: 3 });
+              } catch {
+                return; // offline and not cached: the dot stands in
+              }
+            }
+            flagged.add(iso);
+          }),
+        );
+        if (!alive) return;
+      }
       m.getSource<GeoJSONSource>("been-cities")?.setData({
         type: "FeatureCollection",
-        features: been.cities.map((c) => ({ type: "Feature", properties: { name: c.name }, geometry: { type: "Point", coordinates: [c.lng, c.lat] } })),
+        features: been.cities.map((c) => ({
+          type: "Feature",
+          properties: { name: c.name, country: c.country, flag: flagged.has(c.country) },
+          geometry: { type: "Point", coordinates: [c.lng, c.lat] },
+        })),
       });
-      for (const id of ["been-fill", "been-line", "been-cities"]) m.setLayoutProperty(id, "visibility", show);
+      m.setFilter("been-cities", ["!=", ["get", "flag"], true]);
+      for (const id of ["been-fill", "been-line", "been-cities", "been-flags"]) m.setLayoutProperty(id, "visibility", show);
     })();
     return () => {
       alive = false;
     };
-  }, [gen, readyGen, been]);
+  }, [gen, readyGen, been, cityMarks]);
 
   // Selecting a trip turns the globe to it and leans in; putting it down pulls back to the whole globe.
   const leaned = useRef(false);

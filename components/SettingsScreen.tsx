@@ -187,6 +187,26 @@ export function SettingsScreen() {
         </Row>
         <Row
           trailing={
+            <div role="radiogroup" aria-label="Cities on the globe" className="flex rounded-lg bg-soft p-0.5">
+              {(["dot", "flag"] as const).map((k) => (
+                <button
+                  key={k}
+                  role="radio"
+                  aria-checked={prefs.cityMarks === k}
+                  onClick={() => savePrefs({ cityMarks: k }).catch((e) => setNotice(e.message))}
+                  className={`rounded-md px-3 py-1 text-[14px] ${prefs.cityMarks === k ? "bg-raised font-semibold text-ink shadow-[var(--shadow-card)]" : "text-muted"}`}
+                >
+                  {k === "dot" ? "Dot" : "Flag"}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          <div className="text-[16px]">Cities on the globe</div>
+          <div className="text-[13px] text-muted">A green dot, or the country&apos;s flag</div>
+        </Row>
+        <Row
+          trailing={
             <select
               aria-label="Home currency"
               value={prefs.homeCurrency}

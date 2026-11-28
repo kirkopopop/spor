@@ -31,8 +31,8 @@ type State = {
   prefs: Prefs;
 };
 
-export type Prefs = { timeFormat: "24h" | "12h"; homeCurrency: Trip["currency"]; theme: ThemePref };
-const DEFAULT_PREFS: Prefs = { timeFormat: "24h", homeCurrency: "EUR", theme: "system" };
+export type Prefs = { timeFormat: "24h" | "12h"; homeCurrency: Trip["currency"]; theme: ThemePref; cityMarks: "dot" | "flag" };
+const DEFAULT_PREFS: Prefs = { timeFormat: "24h", homeCurrency: "EUR", theme: "system", cityMarks: "dot" };
 
 const EMPTY: State = { loaded: false, online: true, snapshots: [], outbox: [], members: [], prefs: DEFAULT_PREFS };
 let state: State = EMPTY;

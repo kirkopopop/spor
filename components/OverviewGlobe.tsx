@@ -10,7 +10,7 @@ import { tripRoutes } from "@/lib/tripView";
 import { beenShading, tripPlaces } from "@/lib/places";
 import { flightPlaces } from "@/lib/flights";
 import { addPlace, removePlaces } from "@/lib/placesStore";
-import { usePeople } from "@/lib/store";
+import { usePeople, usePrefs } from "@/lib/store";
 import { useTravel } from "@/lib/useTravel";
 import { Globe, type GlobeBeen, type GlobePin } from "./map/Globe";
 import { TripTile } from "./Destination";
@@ -29,6 +29,7 @@ const EVERYONE = "everyone";
  */
 export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; today: string; focus?: Trip; stats?: React.ReactNode }) {
   const { members } = usePeople();
+  const prefs = usePrefs();
   const { people, me, rows, beenOf, flightsOf } = useTravel(today);
   const all = useMemo<GlobePin[]>(
     () =>
@@ -63,7 +64,7 @@ export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; t
     if (filter !== "been") return undefined;
     const shown = shownPerson === EVERYONE ? people.map((p) => beenOf(p.userId)) : [beenOf(shownPerson)];
     const cities = shown.flatMap((b) => b.cities).filter((c): c is typeof c & { lat: number; lng: number } => c.lat != null && c.lng != null);
-    return { shading: beenShading(shown), people: shown.length, cities: cities.map((c) => ({ lat: c.lat, lng: c.lng, name: c.name })) };
+    return { shading: beenShading(shown), people: shown.length, cities: cities.map((c) => ({ lat: c.lat, lng: c.lng, name: c.name, country: c.country })) };
   }, [filter, shownPerson, people, beenOf]);
   const shownBeen = shownPerson === EVERYONE ? undefined : beenOf(shownPerson);
 
@@ -115,6 +116,7 @@ export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; t
         onSelect={setSelectedId}
         focus={focusAt}
         been={globeBeen}
+        cityMarks={prefs.cityMarks}
         onCountryTap={tapCountry}
         className="absolute inset-0"
       />

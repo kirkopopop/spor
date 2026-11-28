@@ -4,8 +4,8 @@ import { hasSupabase, SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 
 // Everything is private: no session, no app. Also refreshes the session cookie on each visit.
 // The connector endpoints check Claude's bearer token themselves, so they skip the cookie gate.
-// The install files (manifest, icons, service worker) hold no data and must load before sign-in.
-const PUBLIC = ["/login", "/privacy", "/terms", "/auth/", "/api/mcp", "/.well-known/", "/manifest.webmanifest", "/icon", "/apple-icon", "/sw.js", "/maplibre-worker.mjs"];
+// The install files (manifest, icons, service worker) and the flag images hold no data and must load before sign-in.
+const PUBLIC = ["/login", "/privacy", "/terms", "/auth/", "/api/mcp", "/.well-known/", "/manifest.webmanifest", "/icon", "/apple-icon", "/sw.js", "/maplibre-worker.mjs", "/flags/"];
 
 export async function proxy(request: NextRequest) {
   if (!hasSupabase) {
