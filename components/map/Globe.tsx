@@ -76,7 +76,8 @@ export function Globe({
         minZoom: fitZoom(box.current, 0.55),
         maxZoom: 9,
         attributionControl: false, // added top-right below, clear of the card's own text at the bottom
-        scrollZoom: false, // the page scrolls past it; zoom with pinch, double-tap or the buttons
+        // With a mouse or trackpad the wheel zooms; on a phone the page scrolls past it (pinch zooms there).
+        scrollZoom: matchMedia("(hover: hover) and (pointer: fine)").matches,
         dragRotate: false,
         pitchWithRotate: false,
         fadeDuration: 0,
@@ -90,6 +91,7 @@ export function Globe({
       };
       m.on("mousedown", stop);
       m.on("touchstart", stop);
+      m.on("wheel", stop);
       // style.load, not load: load waits until every visible tile is in at once, which a turning globe
       // may never reach on a slow connection. The projection and our layers need only the style.
       m.once("style.load", () => {

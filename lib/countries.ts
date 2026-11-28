@@ -1,7 +1,8 @@
 import type { Place } from "./places";
 
-// Codes the browser can name but that aren't countries today (old states, groupings, reserved).
-const NOT_COUNTRIES = new Set(["AN", "BU", "CS", "DD", "FX", "NT", "SU", "TP", "YD", "YU", "ZR", "EU", "EZ", "UN", "QO", "ZZ", "AC", "CP", "CQ", "DG", "EA", "IC", "TA"]);
+// Codes the browser can name but that aren't countries today (old states, groupings, reserved, and
+// old codes for countries it also names by today's: Benin, Burkina Faso, Vanuatu, Zimbabwe, the UK, Vietnam).
+const NOT_COUNTRIES = new Set(["DY", "HV", "NH", "RH", "UK", "VD", "XA", "XB", "AN", "BU", "CS", "DD", "FX", "NT", "SU", "TP", "YD", "YU", "ZR", "EU", "EZ", "UN", "QO", "ZZ", "AC", "CP", "CQ", "DG", "EA", "IC", "TA"]);
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const names = typeof Intl !== "undefined" && "DisplayNames" in Intl ? new Intl.DisplayNames(["en"], { type: "region" }) : undefined;
 

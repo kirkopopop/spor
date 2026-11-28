@@ -95,6 +95,7 @@ export function homeCountry(flights: Flight[]): string | undefined {
 
 export type Stats = {
   countries: number;
+  countryCodes: string[];
   flights: number;
   minutes: number;
   km: number;
@@ -121,7 +122,7 @@ export function travelStats(opts: {
 }): Stats {
   const { trips, today, personName, beenCountries, year } = opts;
   const flights = year ? opts.flights.filter((f) => f.date.startsWith(year)) : opts.flights;
-  let countries = beenCountries.size;
+  let codes = [...beenCountries];
   if (year) {
     const home = homeCountry(opts.flights);
     const through = connections(opts.flights);
@@ -132,10 +133,11 @@ export function travelStats(opts: {
     }
     for (const f of flights) if (!through.has(f.id)) set.add(f.toCountry);
     if (home) set.delete(home);
-    countries = set.size;
+    codes = [...set];
   }
   return {
-    countries,
+    countries: codes.length,
+    countryCodes: codes,
     flights: flights.length,
     minutes: flights.reduce((n, f) => n + flightMinutes(f), 0),
     km: flights.reduce((n, f) => n + f.km, 0),
