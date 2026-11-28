@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { countryName, searchCities, searchCountries } from "@/lib/countries";
 import type { Been, Place } from "@/lib/places";
-import { addPlace, removePlaces } from "@/lib/placesStore";
+import { addPlace, removePlaces, renamePlace } from "@/lib/placesStore";
 import { Check, Close, Plus } from "./icons";
 import { field } from "./Forms";
 
@@ -16,6 +16,7 @@ export function PlacesSheet({ me, logged, been }: { me?: string; logged: Place[]
   const [cities, setCities] = useState<(Place & { region?: string })[]>([]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string>();
+  const [renaming, setRenaming] = useState<string>(); // id of the city being renamed
   const mine = useMemo(() => logged.filter((p) => p.userId === me), [logged, me]);
 
   // Cities as you type: a short pause first, and each new keystroke cancels the last request.
@@ -137,9 +138,34 @@ export function PlacesSheet({ me, logged, been }: { me?: string; logged: Place[]
                 <ul className="mt-1.5 flex flex-wrap gap-1.5">
                   {c.cities.map((city) => {
                     const row = mine.find((m) => m.kind === "city" && m.country === city.country && m.name === city.name);
+                    if (row?.id && renaming === row.id) {
+                      return (
+                        <li key={city.name} className="w-full">
+                          <RenameField
+                            name={city.name}
+                            onSave={async (name) => {
+                              setRenaming(undefined);
+                              setError(undefined);
+                              try {
+                                await renamePlace(row.id!, name);
+                              } catch (e) {
+                                setError(e instanceof Error ? e.message : "Couldn't rename that place.");
+                              }
+                            }}
+                            onCancel={() => setRenaming(undefined)}
+                          />
+                        </li>
+                      );
+                    }
                     return (
                       <li key={city.name} className="inline-flex items-center gap-1 rounded-full bg-soft py-1 pr-1.5 pl-3 text-[14px] text-ink-2">
-                        {city.name}
+                        {row?.id ? (
+                          <button onClick={() => setRenaming(row.id)} aria-label={`Rename ${city.name}`} className="press text-left">
+                            {city.name}
+                          </button>
+                        ) : (
+                          city.name
+                        )}
                         {row?.id ? (
                           <button
                             onClick={() => remove([row.id!])}
@@ -183,6 +209,43 @@ function Result({ title, subtitle, added, onAdd }: { title: string; subtitle: st
         )}
       </button>
     </li>
+  );
+}
+
+/** A city's name, in place, ready to type over. Enter saves, Escape puts it back. */
+function RenameField({ name, onSave, onCancel }: { name: string; onSave: (name: string) => void; onCancel: () => void }) {
+  const [value, setValue] = useState(name);
+  const valid = value.trim().length > 0 && value.trim().length <= 120;
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (valid) onSave(value);
+      }}
+      className="flex items-center gap-2"
+    >
+      <label className="flex-1">
+        <span className="sr-only">Name of {name}</span>
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation(); // close the field, not the sheet
+              e.preventDefault();
+              onCancel();
+            }
+          }}
+          onFocus={(e) => e.target.select()}
+          maxLength={120}
+          className={`${field} h-11`}
+        />
+      </label>
+      <button type="submit" disabled={!valid} className="press h-11 rounded-xl bg-accent px-4 text-[15px] font-semibold text-on-fill disabled:opacity-40">
+        Save
+      </button>
+    </form>
   );
 }
 

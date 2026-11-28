@@ -102,6 +102,23 @@ export async function addPlace(p: Omit<Place, "id" | "userId" | "fromTrip">, me?
   return saved;
 }
 
+/** Renames a place you logged. Shows at once; rolled back if the server says no. */
+export async function renamePlace(id: string, name: string) {
+  const clean = name.trim();
+  if (!clean) throw new Error("Add a name.");
+  const before = state.rows;
+  const row = before.find((r) => r.id === id);
+  if (!row || row.name === clean) return;
+  emit({ rows: before.map((r) => (r.id === id ? { ...r, name: clean } : r)) });
+  if (!hasSupabase) return dev.write(state.rows);
+  const { error } = await supabase().from("places_been").update({ name: clean }).eq("id", id).select("id").single();
+  if (error) {
+    emit({ rows: before });
+    if (error.code === "23505") throw new Error(`${clean} is there already.`);
+    throw new Error(navigator.onLine ? "Couldn't rename that place. Try again." : "Renaming a place needs a connection.");
+  }
+}
+
 /** Removes some of the signed-in person's logged places (the database refuses anyone else's). */
 export async function removePlaces(ids: string[]) {
   const before = state.rows;

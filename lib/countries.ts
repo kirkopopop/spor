@@ -35,27 +35,75 @@ export function searchCountries(q: string, limit = 4) {
   return [...all.filter((c) => fold(c.name).startsWith(t)), ...all.filter((c) => !fold(c.name).startsWith(t) && fold(c.name).includes(t))].slice(0, limit);
 }
 
-type PhotonFeature = {
+export type PhotonFeature = {
   geometry: { coordinates: [number, number] };
-  properties: { name?: string; countrycode?: string; country?: string; state?: string; osm_value?: string };
+  properties: { name?: string; countrycode?: string; country?: string; state?: string; type?: string; osm_key?: string; osm_value?: string };
 };
+
+export type CityResult = Place & { region?: string };
+
+// Suffixes that name an administrative area rather than the place people call it by.
+const SUFFIX = /\s+(?:(?:Metropolitan|Urban|Rural)\s+)?(?:Municipality|Metropolitan Area|Metropolitan Region|Kommune|kommun|Commune)$/i;
+const PREFIX = /^(?:(?:City|Municipality|Commune) of)\s+/i;
+
+/** "Hvidovre Municipality" → "Hvidovre", "Istanbul Metropolitan Municipality" → "Istanbul". */
+export const cleanPlaceName = (name: string) => name.replace(SUFFIX, "").replace(PREFIX, "").trim() || name.trim();
+
+/**
+ * How much a Photon result looks like a city people travel to (lower is better), or undefined
+ * for things that aren't settlements (streets, shops, stations, regions, census areas).
+ */
+export function cityRank(p: PhotonFeature["properties"]): number | undefined {
+  const v = p.osm_value ?? "";
+  if (p.osm_key === "place") {
+    if (v === "city") return 0;
+    if (v === "town") return 1;
+    // Tokyo is a prefecture-level city: a province tagged with the city layer.
+    if ((v === "province" || v === "state") && p.type === "city") return 0;
+    if (v === "municipality" || v === "borough" || v === "suburb") return 3;
+    if (v === "village") return 4;
+    if (v === "hamlet") return 5;
+    return undefined;
+  }
+  // An administrative boundary on the city layer (a municipality): a city, but not one named for people.
+  if (p.osm_key === "boundary" && v === "administrative" && p.type === "city") return 3;
+  return undefined;
+}
+
+/**
+ * Real cities from Photon's answer: settlements only, names that start with what was typed first,
+ * then cities and towns before villages; one per name and country.
+ */
+export function pickCities(features: PhotonFeature[], query = "", limit = 5): CityResult[] {
+  const typed = fold(query.trim());
+  const miss = (name: string) => (typed && !fold(cleanPlaceName(name)).startsWith(typed) ? 1 : 0);
+  const ranked = features
+    .map((f, i) => ({ f, i, rank: cityRank(f.properties), miss: miss(f.properties.name ?? "") }))
+    .filter((r): r is typeof r & { rank: number } => r.rank !== undefined && !!r.f.properties.name && !!r.f.properties.countrycode)
+    .sort((a, b) => a.miss - b.miss || a.rank - b.rank || a.i - b.i); // ties keep Photon's order, which puts bigger places first
+  const out: CityResult[] = [];
+  for (const { f } of ranked) {
+    const { state, country } = f.properties;
+    const name = cleanPlaceName(f.properties.name!);
+    const code = f.properties.countrycode!.toUpperCase();
+    if (out.some((p) => p.name.toLowerCase() === name.toLowerCase() && p.country === code)) continue;
+    const [lng, lat] = f.geometry.coordinates;
+    out.push({ kind: "city", name, country: code, lat, lng, region: [state !== name ? state : undefined, country].filter(Boolean).join(", ") });
+  }
+  return out.slice(0, limit);
+}
 
 /**
  * Cities matching what's typed, from Photon (komoot's OpenStreetMap search: free, no key, open to
- * browsers). Only the typed text is sent.
+ * browsers). Only the typed text is sent. Asks for the place layers only (a big city can be tagged
+ * as a district or a province), then keeps real settlements, cities and towns first.
  */
-export async function searchCities(q: string, signal?: AbortSignal): Promise<(Place & { region?: string })[]> {
+export async function searchCities(q: string, signal?: AbortSignal): Promise<CityResult[]> {
   const t = q.trim();
   if (t.length < 2) return [];
-  const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(t)}&limit=8&layer=city&lang=en`, { signal });
+  const layers = ["city", "district", "county", "state"].map((l) => `&layer=${l}`).join("");
+  const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(t)}&limit=15&lang=en${layers}`, { signal });
   if (!res.ok) return [];
   const { features } = (await res.json()) as { features: PhotonFeature[] };
-  const out: (Place & { region?: string })[] = [];
-  for (const f of features) {
-    const { name, countrycode, state, country } = f.properties;
-    if (!name || !countrycode || out.some((p) => p.name === name && p.country === countrycode.toUpperCase())) continue;
-    const [lng, lat] = f.geometry.coordinates;
-    out.push({ kind: "city", name, country: countrycode.toUpperCase(), lat, lng, region: [state, country].filter(Boolean).join(", ") });
-  }
-  return out.slice(0, 5);
+  return pickCities(features, t);
 }
