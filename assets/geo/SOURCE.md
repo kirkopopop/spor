@@ -15,3 +15,11 @@ OurAirports (public domain), from https://davidmegginson.github.io/ourairports-d
 slimmed by `node scripts/build-airports.mjs <airports.csv>` to airports with scheduled service and an
 IATA code, as `[iata, name, city, country, lat, lng]` (coordinates to 0.001°). Turns a flight's codes
 into its distance and countries.
+
+# cities.json
+
+Natural Earth 1:10m populated places (public domain), from
+https://github.com/nvkelso/natural-earth-vector/blob/master/geojson/ne_10m_populated_places_simple.geojson,
+slimmed by `node scripts/build-cities.mjs <ne_10m_populated_places_simple.geojson>` to
+`[name, iso, lat, lng, population, capital, other names]` (about 7,300 cities, coordinates to 0.01°).
+Population is `pop_max` (the metro area where known). Gives the travel highlights their sizes and capitals.
