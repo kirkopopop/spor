@@ -347,6 +347,18 @@ const HIGHLIGHT: Record<Highlight["kind"], string> = {
   capitals: "Capitals",
 };
 
+function detail(h: Exclude<Highlight, { kind: "capitals" }>) {
+  switch (h.kind) {
+    case "north":
+    case "south":
+      return latitude(h.lat);
+    case "farthest":
+      return `${km(h.km)} km`;
+    default:
+      return `${population(h.population)} people`;
+  }
+}
+
 /** A few standout facts about the cities been to; all time, as cities carry no dates. */
 function Highlights({ cities, home }: { cities: { name: string; country: string; lat?: number; lng?: number }[]; home?: [number, number] }) {
   const [refs, setRefs] = useState<CityRef[]>();
@@ -359,7 +371,6 @@ function Highlights({ cities, home }: { cities: { name: string; country: string;
   }, []);
   const list = useMemo(() => (refs ? highlights(cities, refs, home) : []), [refs, cities, home]);
   if (!list.length) return null;
-  const where = (h: { country: string }) => countryName(h.country);
   return (
     <section aria-label="Highlights">
       <h4 className="mb-1.5 px-1 text-[13px] font-medium tracking-[0.02em] text-muted uppercase">Highlights</h4>
@@ -378,11 +389,7 @@ function Highlights({ cities, home }: { cities: { name: string; country: string;
               <>
                 <p className="truncate text-[17px] leading-snug font-semibold">{h.city}</p>
                 <p className="tnum truncate text-[13px] text-ink-2">
-                  {h.kind === "north" || h.kind === "south"
-                    ? `${latitude(h.lat)} · ${where(h)}`
-                    : h.kind === "farthest"
-                      ? `${km(h.km)} km · ${where(h)}`
-                      : `${population(h.population)} people · ${where(h)}`}
+                  {detail(h)} · {countryName(h.country)}
                 </p>
               </>
             )}
