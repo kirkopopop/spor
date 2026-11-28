@@ -429,18 +429,18 @@ export function buildServer(sb: SupabaseClient, userId: string) {
     {
       title: "List flights",
       description:
-        "Every flight the household has logged for travel stats: id, who, date, from and to (IATA), km, air time in minutes (null = estimated from distance).",
+        "Every flight the household has logged for travel stats: id, who, date, from and to (IATA), km, air time in minutes (null = estimated from distance), airline (null = not given).",
       annotations: { readOnlyHint: true },
     },
     async () => {
       const [{ data, error }, { data: members }] = await Promise.all([
-        sb.from("flights").select("id, user_id, flown_on, from_code, to_code, km, minutes").order("flown_on"),
+        sb.from("flights").select("id, user_id, flown_on, from_code, to_code, km, minutes, airline").order("flown_on"),
         sb.from("household_members").select("user_id, display_name"),
       ]);
       if (error) return fail([error.message]);
       const names = new Map((members ?? []).map((m) => [m.user_id, m.display_name]));
       return ok(
-        (data ?? []).map((f) => ({ id: f.id, who: names.get(f.user_id) ?? "someone", date: f.flown_on, from: f.from_code, to: f.to_code, km: f.km, minutes: f.minutes })),
+        (data ?? []).map((f) => ({ id: f.id, who: names.get(f.user_id) ?? "someone", date: f.flown_on, from: f.from_code, to: f.to_code, km: f.km, minutes: f.minutes, airline: f.airline })),
       );
     },
   );
@@ -459,6 +459,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
               from: z.string().regex(/^[A-Za-z]{3}$/).describe("IATA airport code, e.g. CPH"),
               to: z.string().regex(/^[A-Za-z]{3}$/),
               minutes: z.number().int().min(1).max(1440).optional().describe("Scheduled air time; omit to estimate from distance"),
+              airline: z.string().trim().min(1).max(60).optional().describe("Airline operating the flight, e.g. SAS, Norwegian"),
               people: z.array(z.string()).optional().describe("First names of who flew; defaults to the signed-in person"),
             }),
           )
@@ -489,6 +490,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
           to_country: between.toCountry,
           km: between.km,
           minutes: f.minutes ?? null,
+          airline: f.airline ?? null,
         }));
       });
       if (errors.length) return fail(errors);

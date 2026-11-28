@@ -13,6 +13,7 @@ export type Flight = {
   toCountry: string;
   km: number;
   minutes?: number; // air time as flown; missing means estimated from the distance
+  airline?: string; // as typed, e.g. "SAS"
 };
 
 /** [iata, name, city, country, lat, lng], from assets/geo/airports.json */
@@ -99,6 +100,7 @@ export type Stats = {
   km: number;
   estimated: boolean; // some air time is an estimate
   longest?: Flight;
+  airlines: [string, number][]; // most flown first
 };
 
 const ended = (t: Trip, today: string) => t.stage === "memory" || (!!t.endDate && t.endDate < today);
@@ -139,7 +141,25 @@ export function travelStats(opts: {
     km: flights.reduce((n, f) => n + f.km, 0),
     estimated: flights.some((f) => f.minutes == null),
     longest: flights.reduce<Flight | undefined>((a, f) => (!a || f.km > a.km ? f : a), undefined),
+    airlines: airlineCounts(flights),
   };
+}
+
+/** Airlines by number of flights, most first; spelled as most often typed, matched ignoring case. */
+export function airlineCounts(flights: Flight[]): [string, number][] {
+  const by = new Map<string, { names: Map<string, number>; n: number }>();
+  for (const f of flights) {
+    const name = f.airline?.trim();
+    if (!name) continue;
+    const k = name.toLowerCase();
+    const e = by.get(k) ?? { names: new Map(), n: 0 };
+    e.n++;
+    e.names.set(name, (e.names.get(name) ?? 0) + 1);
+    by.set(k, e);
+  }
+  return [...by.values()]
+    .map((e): [string, number] => [[...e.names].sort((a, b) => b[1] - a[1])[0][0], e.n])
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
 /** Years with something to show, newest first: flights and ended trips. */

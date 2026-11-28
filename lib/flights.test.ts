@@ -9,6 +9,7 @@ import {
   parseAirTime,
   searchAirports,
   travelStats,
+  airlineCounts,
   travelYears,
   type Airport,
   type Flight,
@@ -119,5 +120,15 @@ describe("searchAirports", () => {
     expect(searchAirports(all, "lon").map((a) => a[0])).toEqual(["LHR", "LGW"]);
     expect(searchAirports(all, "kastrup").map((a) => a[0])).toEqual(["CPH"]);
     expect(searchAirports(all, " ")).toEqual([]);
+  });
+});
+
+describe("airlineCounts", () => {
+  const f = (id: string, airline?: string) => ({ id, date: "2026-01-01", from: "CPH", to: "LHR", fromCountry: "DK", toCountry: "GB", km: 960, airline });
+  it("groups ignoring case, keeps the usual spelling, most flown first, skips blanks", () => {
+    expect(airlineCounts([f("1", "SAS"), f("2", "sas"), f("3", "SAS"), f("4", "Norwegian"), f("5"), f("6", " ")])).toEqual([
+      ["SAS", 3],
+      ["Norwegian", 1],
+    ]);
   });
 });

@@ -20,13 +20,14 @@ type Row = {
   to_country: string;
   km: number;
   minutes: number | null;
+  airline: string | null;
 };
 type State = { loaded: boolean; flights: Flight[] };
 export type FlightInput = Omit<Flight, "id">;
 
 const idb = typeof indexedDB === "undefined" ? undefined : createStore("spor-flights", "rows");
 const DEV_KEY = "spor-flights-dev"; // local prototype without Supabase
-const SELECT = "id, user_id, flown_on, from_code, to_code, from_country, to_country, km, minutes";
+const SELECT = "id, user_id, flown_on, from_code, to_code, from_country, to_country, km, minutes, airline";
 
 let state: State = { loaded: false, flights: [] };
 const listeners = new Set<() => void>();
@@ -45,6 +46,7 @@ const fromRow = (r: Row): Flight => ({
   toCountry: r.to_country,
   km: r.km,
   minutes: r.minutes ?? undefined,
+  airline: r.airline ?? undefined,
 });
 const toRow = (f: FlightInput) => ({
   user_id: f.userId,
@@ -55,6 +57,7 @@ const toRow = (f: FlightInput) => ({
   to_country: f.toCountry,
   km: f.km,
   minutes: f.minutes ?? null,
+  airline: f.airline?.trim() || null,
 });
 
 const dev = {

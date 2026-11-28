@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  airlineCounts,
   airTimeText,
   duration,
   EARTH_KM,
@@ -128,6 +129,7 @@ function TravelSheet({ today, travel }: { today: string; travel: Travel }) {
         airports={airports}
         people={people.map((p) => ({ userId: p.userId, name: p.userId === me ? "Me" : firstName(nameOf(p.userId)) }))}
         defaultPerson={person}
+        knownAirlines={airlineCounts(travel.people.flatMap((p) => flightsOf(p.userId))).map(([a]) => a)}
         today={today}
         onDone={() => setEditing(undefined)}
       />
@@ -201,6 +203,19 @@ function TravelSheet({ today, travel }: { today: string; travel: Travel }) {
         </p>
       )}
 
+      {stats.airlines.length > 0 && (
+        <p className="tnum -mt-3 px-1 text-[14px] text-muted">
+          {stats.airlines.length === 1 ? "Airline" : "Airlines"}:{" "}
+          {stats.airlines.slice(0, 4).map(([a, n], i) => (
+            <span key={a}>
+              {i > 0 && ", "}
+              <span className="font-medium text-ink-2">{a}</span> {n}
+            </span>
+          ))}
+          {stats.airlines.length > 4 && `, +${stats.airlines.length - 4} more`}
+        </p>
+      )}
+
       {!year && perYear.length > 1 && (
         <section aria-label="Kilometres flown by year">
           <h4 className="mb-1.5 px-1 text-[13px] font-medium tracking-[0.02em] text-muted uppercase">By year</h4>
@@ -249,6 +264,7 @@ function TravelSheet({ today, travel }: { today: string; travel: Travel }) {
                     </span>
                     <span className="block truncate text-[14px] text-muted">
                       {dayMonth(f.date)}
+                      {f.airline && ` · ${f.airline}`}
                       {airports && ` · ${place(airports.get(f.from))} to ${place(airports.get(f.to))}`}
                     </span>
                   </span>
@@ -286,6 +302,7 @@ function FlightForm({
   airports,
   people,
   defaultPerson,
+  knownAirlines,
   today,
   onDone,
 }: {
@@ -293,6 +310,7 @@ function FlightForm({
   airports?: Map<string, Airport>;
   people: { userId: string; name: string }[];
   defaultPerson: string;
+  knownAirlines: string[];
   today: string;
   onDone: () => void;
 }) {
@@ -300,6 +318,7 @@ function FlightForm({
   const [from, setFrom] = useState<Airport | undefined>(flight && airports?.get(flight.from));
   const [to, setTo] = useState<Airport | undefined>(flight && airports?.get(flight.to));
   const [time, setTime] = useState(flight?.minutes ? airTimeText(flight.minutes) : "");
+  const [airline, setAirline] = useState(flight?.airline ?? "");
   const [who, setWho] = useState<string[]>([flight?.userId ?? defaultPerson]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -324,7 +343,7 @@ function FlightForm({
   function save(e: React.FormEvent) {
     e.preventDefault();
     if (!valid || !between) return;
-    const base = { ...between, date, minutes };
+    const base = { ...between, date, minutes, airline: airline.trim() || undefined };
     void run(() => (flight ? updateFlight(flight.id, { ...base, userId: flight.userId }) : addFlights(who.map((userId) => ({ ...base, userId })))));
   }
 
@@ -361,6 +380,24 @@ function FlightForm({
           {km(between.km)} km{!time.trim() && ", air time estimated"}
         </p>
       )}
+
+      <label>
+        <span className="mb-1 block px-1 text-[13px] font-medium text-muted">Airline</span>
+        <input
+          value={airline}
+          onChange={(e) => setAirline(e.target.value)}
+          maxLength={60}
+          list="known-airlines"
+          autoComplete="off"
+          placeholder="Optional, e.g. SAS"
+          className={field}
+        />
+        <datalist id="known-airlines">
+          {knownAirlines.map((a) => (
+            <option key={a} value={a} />
+          ))}
+        </datalist>
+      </label>
 
       {!flight && people.length > 1 && (
         <div role="group" aria-label="Who flew" className="flex flex-wrap gap-2">
