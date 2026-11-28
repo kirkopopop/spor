@@ -300,7 +300,16 @@ export default function Login() {
                   </button>
                 )}
               </div>
-              <p className="mt-6 text-[13px] text-muted">Your trips stay private until you share them.</p>
+              <p className="mt-6 text-[13px] text-muted">
+                Your trips stay private until you share them.{" "}
+                <a href="/privacy" className="underline">
+                  Privacy
+                </a>{" "}
+                ·{" "}
+                <a href="/terms" className="underline">
+                  Terms
+                </a>
+              </p>
             </>
           )}
         </div>
