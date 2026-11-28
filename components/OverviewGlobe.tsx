@@ -10,7 +10,7 @@ import { tripRoutes } from "@/lib/tripView";
 import { beenShading, tripPlaces } from "@/lib/places";
 import { flightPlaces } from "@/lib/flights";
 import { addPlace, removePlaces } from "@/lib/placesStore";
-import { useHousehold } from "@/lib/store";
+import { usePeople } from "@/lib/store";
 import { useTravel } from "@/lib/useTravel";
 import { Globe, type GlobeBeen, type GlobePin } from "./map/Globe";
 import { TripTile } from "./Destination";
@@ -23,12 +23,12 @@ const LABEL: Record<Filter, string> = { all: "All", planned: "Planned", done: "D
 const EVERYONE = "everyone";
 
 /**
- * The household's world: every trip with a place on a globe you can turn, and the places each
+ * Your world: every trip you're on, with a place on a globe you can turn, and the places each
  * person has been. Filter to what's planned, done or been; tap a pin for the trip, a country to
  * log it.
  */
 export function OverviewGlobe({ trips, today, focus, stats }: { trips: Trip[]; today: string; focus?: Trip; stats?: React.ReactNode }) {
-  const { members } = useHousehold();
+  const { members } = usePeople();
   const { people, me, rows, beenOf, flightsOf } = useTravel(today);
   const all = useMemo<GlobePin[]>(
     () =>

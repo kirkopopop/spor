@@ -15,10 +15,12 @@ Without Supabase settings the app runs in dev on the trips in `data/seed/*.json`
 
 ## Supabase
 
-1. In the project's SQL editor, run `supabase/migrations/20261125120000_init.sql` (schema, access rules, sign-up allowlist, realtime).
-2. Load trips: `node scripts/seed-sql.ts <your-email>` writes `data/seed/seed.sql`; run it in the SQL editor.
-   It creates the household and lets only that email sign up.
-3. Auth → URL configuration: add `http://localhost:3000/auth/callback` (and the Vercel URL later) to Redirect URLs.
+1. In the project's SQL editor, run every file in `supabase/migrations/` in order.
+2. Sign up in the app, then load trips: `node scripts/seed-sql.ts <your-email>` writes `data/seed/seed.sql`; run it in the SQL editor.
+   The trips become yours; share them from each trip.
+3. Auth → URL configuration: add `http://localhost:3000/auth/callback` (and the Vercel URL) to Redirect URLs.
+   Auth → Providers: keep Email on (with "Confirm email"), and turn on Google with an OAuth client from Google Cloud
+   (redirect URI `https://<ref>.supabase.co/auth/v1/callback`).
 4. `.env.local`:
 
    ```

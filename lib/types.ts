@@ -103,7 +103,9 @@ export type Expense = {
   spentAt: string;
 };
 
-export type Member = { userId: string; name: string; role?: "owner" | "member" };
+export type Role = "owner" | "editor" | "viewer";
+/** Someone with a tur account: on a trip (with their role there) or a travel companion. */
+export type Member = { userId: string; name: string; role?: Role };
 
 export type Trip = {
   id: string;
@@ -116,6 +118,8 @@ export type Trip = {
   currency: "EUR" | "GBP" | "DKK" | "USD";
   people: string[];
   summary?: string;
+  ownerId?: string;
+  members?: Member[]; // accounts the trip is shared with, owner included
   days: Day[];
   bookings: Booking[];
   budget: BudgetLine[];

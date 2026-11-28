@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Day, Stop, Trip } from "@/lib/types";
-import { addExpense, addNote, deleteStop, saveStop, useHousehold } from "@/lib/store";
+import { addExpense, addNote, deleteStop, saveStop, useCanEdit, usePeople, useTrip } from "@/lib/store";
 
 // Small forms for edits made by hand on the phone. Planning stays with Claude;
 // these cover the quick fixes: a stop, an expense, a note.
@@ -26,7 +26,13 @@ function Segmented<T extends string>({ value, options, onChange, label }: {
   );
 }
 
+/** Shown in place of a form on a trip someone shared with you to view. */
+export function ViewOnly() {
+  return <p className="pr-10 text-[15px] text-muted">You can view this trip. Ask its owner for edit access to change it.</p>;
+}
+
 export function StopForm({ trip, day, stop, onDone }: { trip: Trip; day: Day; stop?: Stop; onDone: () => void }) {
+  const canEdit = useCanEdit(trip);
   const [time, setTime] = useState(stop?.time ?? "");
   const [name, setName] = useState(stop?.name ?? "");
   const [kind, setKind] = useState<Stop["kind"]>(stop?.kind ?? "normal");
@@ -42,6 +48,7 @@ export function StopForm({ trip, day, stop, onDone }: { trip: Trip; day: Day; st
     onDone();
   }
 
+  if (!canEdit) return <ViewOnly />;
   return (
     <form onSubmit={save} className="flex flex-col gap-3 pr-10">
       <h3 className="text-xl font-bold tracking-[-0.02em]">{stop ? "Edit stop" : "New stop"}</h3>
@@ -87,7 +94,9 @@ export function StopForm({ trip, day, stop, onDone }: { trip: Trip; day: Day; st
 const CATEGORIES = ["food", "transport", "tickets", "stay", "other"];
 
 export function ExpenseForm({ trip, stopId, onDone }: { trip: Trip; stopId?: string; onDone: () => void }) {
-  const { members, me } = useHousehold();
+  const { members: people, me } = usePeople();
+  const members = trip.members ?? people; // who can have paid: the people on this trip
+  const canEdit = useCanEdit(trip);
   const categories = [...new Set([...trip.budget.map((b) => b.category), ...CATEGORIES])];
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(categories[0] ?? "food");
@@ -103,6 +112,7 @@ export function ExpenseForm({ trip, stopId, onDone }: { trip: Trip; stopId?: str
     onDone();
   }
 
+  if (!canEdit) return <ViewOnly />;
   return (
     <form onSubmit={save} className="flex flex-col gap-3 pr-10">
       <h3 className="text-xl font-bold tracking-[-0.02em]">Expense</h3>
@@ -139,6 +149,7 @@ export function NoteForm({ tripId, stopId, dayId, onDone, compact }: {
   tripId: string; stopId?: string; dayId?: string; onDone?: () => void; compact?: boolean;
 }) {
   const [body, setBody] = useState("");
+  const canEdit = useCanEdit(useTrip(tripId).trip);
   function save(e: React.FormEvent) {
     e.preventDefault();
     if (!body.trim()) return;
@@ -146,6 +157,7 @@ export function NoteForm({ tripId, stopId, dayId, onDone, compact }: {
     setBody("");
     onDone?.();
   }
+  if (!canEdit) return null;
   return (
     <form onSubmit={save} className="flex flex-col gap-2">
       <label>

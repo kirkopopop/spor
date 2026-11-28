@@ -10,7 +10,7 @@ export function spentByCategory(expenses: Expense[]): Record<string, number> {
 }
 
 /**
- * Even split across the household. With two people: who I settle with and how much
+ * Even split across the people on the trip. With two people: who I settle with and how much
  * they owe me (negative: I owe them). Undefined when there is nobody to split with.
  */
 export function settle(expenses: Expense[], members: Member[], me: string | undefined) {

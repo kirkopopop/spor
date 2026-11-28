@@ -100,6 +100,13 @@ export const ChevronRight = (p: P) => (
     <path d="m9 6 6 6-6 6" />
   </Svg>
 );
+export const PeopleIcon = (p: P) => (
+  <Svg {...p}>
+    <circle cx="9" cy="8" r="3.2" />
+    <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+    <path d="M15.5 5.2a3.2 3.2 0 0 1 0 5.6M17 13.6a5.5 5.5 0 0 1 3.5 5.4" />
+  </Svg>
+);
 export const CopyIcon = (p: P) => (
   <Svg {...p}>
     <rect x="9" y="9" width="11" height="11" rx="2" />

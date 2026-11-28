@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { money, plannedTotal } from "@/lib/format";
 import { settle, spentByCategory } from "@/lib/money";
-import { deleteExpense, deleteNote, useHousehold } from "@/lib/store";
+import { deleteExpense, deleteNote, useCanEdit, usePeople } from "@/lib/store";
 import type { Booking, Note, Trip } from "@/lib/types";
 import { Back, Check } from "./icons";
 import { Fold } from "./Fold";
@@ -81,14 +81,16 @@ function BookingList({ bookings, trip }: { bookings: Booking[]; trip: Trip }) {
 }
 
 export function MoneyTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) {
-  const { members, me } = useHousehold();
+  const { members: people, me } = usePeople();
+  const members = trip.members ?? people; // expenses split among the people on this trip
+  const canEdit = useCanEdit(trip);
   const [adding, setAdding] = useState(false);
   const expenses = trip.expenses ?? [];
   const byCat = spentByCategory(expenses);
   const spent = expenses.reduce((n, e) => n + e.amount, 0);
   const planned = plannedTotal(trip);
   const balance = settle(expenses, members, me);
-  const name = (id?: string) => (id === me ? "You" : members.find((m) => m.userId === id)?.name ?? "");
+  const name = (id?: string) => (id === me ? "You" : (members.find((m) => m.userId === id)?.name ?? (id ? "Someone" : "")));
   const lines = [
     ...trip.budget,
     ...Object.keys(byCat)
@@ -141,9 +143,11 @@ export function MoneyTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) 
           )}
         </section>
 
-        <button onClick={() => setAdding(true)} className="press h-12 rounded-xl bg-accent text-[16px] font-semibold text-on-fill">
-          Add expense
-        </button>
+        {canEdit && (
+          <button onClick={() => setAdding(true)} className="press h-12 rounded-xl bg-accent text-[16px] font-semibold text-on-fill">
+            Add expense
+          </button>
+        )}
 
         {expenses.length > 0 && (
           <Fold label={`${expenses.length} expenses`}>
@@ -155,9 +159,11 @@ export function MoneyTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) 
                     <div className="text-xs text-muted">{name(e.paidBy)}</div>
                   </div>
                   <span className="font-semibold">{money(e.amount, trip.currency)}</span>
-                  <button onClick={() => deleteExpense(trip.id, e.id)} aria-label={`Delete ${e.note || e.category}`} className="text-xs text-muted">
-                    Delete
-                  </button>
+                  {canEdit && (
+                    <button onClick={() => deleteExpense(trip.id, e.id)} aria-label={`Delete ${e.note || e.category}`} className="text-xs text-muted">
+                      Delete
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -173,8 +179,8 @@ export function MoneyTab({ trip, onBack }: { trip: Trip; onBack?: () => void }) 
 
 /** One note row: who, when, where, what. */
 export function NoteItem({ note, trip, showWhere = true }: { note: Note; trip: Trip; showWhere?: boolean }) {
-  const { members, me } = useHousehold();
-  const person = note.authorId === me || !note.authorId ? "You" : members.find((m) => m.userId === note.authorId)?.name ?? "Someone";
+  const { members, me } = usePeople();
+  const person = note.authorId === me ? "You" : (members.find((m) => m.userId === note.authorId)?.name ?? "Someone");
   const who = note.via === "claude" ? "Claude" : person;
   const stop = note.stopId ? trip.days.flatMap((d) => d.stops).find((s) => s.id === note.stopId) : undefined;
   const day = note.dayId ? trip.days.find((d) => d.id === note.dayId) : undefined;

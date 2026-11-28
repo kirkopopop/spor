@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import journey from "@/assets/photos/journey.jpg";
 import { useMemo } from "react";
-import { useHousehold, useTrips } from "@/lib/store";
+import { usePeople, useTrips } from "@/lib/store";
 import { dateRange, daysUntil, money, monthYear, openPicks, plannedTotal, todayIn, toBookCount } from "@/lib/format";
 import { groupTrips } from "@/lib/tripView";
 import type { Trip } from "@/lib/types";
@@ -18,7 +18,7 @@ import { TravelCard } from "./TravelStats";
 /** Overview: every trip at a glance, the next one first. */
 export function HomeScreen() {
   const { trips, loaded } = useTrips();
-  const { members, me } = useHousehold();
+  const { members, me } = usePeople();
   const today = todayIn("Europe/Copenhagen");
   const groups = useMemo(() => groupTrips(trips, today), [trips, today]);
   const myName = members.find((m) => m.userId === me)?.name;

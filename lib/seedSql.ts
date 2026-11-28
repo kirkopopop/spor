@@ -1,11 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { Trip } from "./types";
 
-// Builds one SQL transaction that creates the household, its sign-up allowlist
-// and the given trips. Node-only; output holds private trip data, so it is
-// written under data/seed/ (gitignored) and pasted into the Supabase SQL editor.
-
-type Member = { email: string; name: string; role: "owner" | "member" };
+// Builds one SQL transaction that loads the given trips into an existing account
+// (sign up first), which becomes their owner. Node-only; output holds private trip
+// data, so it is written under data/seed/ (gitignored) and pasted into the SQL editor.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -17,9 +15,17 @@ class Json {
   }
 }
 const json = (v: unknown) => (v == null ? null : new Json(v));
+/** A SQL expression written as is (e.g. a subquery). */
+class Raw {
+  readonly sql: string;
+  constructor(sql: string) {
+    this.sql = sql;
+  }
+}
 
 function lit(v: unknown): string {
   if (v === undefined || v === null) return "null";
+  if (v instanceof Raw) return v.sql;
   if (v instanceof Json) return `${lit(JSON.stringify(v.value))}::jsonb`;
   if (typeof v === "number") return Number.isFinite(v) ? String(v) : "null";
   if (typeof v === "boolean") return v ? "true" : "false";
@@ -33,7 +39,7 @@ function insert(table: string, row: Record<string, unknown>) {
   return `insert into ${table} (${cols.join(", ")}) values (${cols.map((c) => lit(row[c])).join(", ")});`;
 }
 
-export function seedSql(trips: Trip[], opts: { household: string; members: Member[] }): string {
+export function seedSql(trips: Trip[], opts: { ownerEmail: string }): string {
   const ids = new Map<string, string>();
   const id = (old: string) => {
     if (UUID.test(old)) return old;
@@ -42,17 +48,18 @@ export function seedSql(trips: Trip[], opts: { household: string; members: Membe
   };
   const scoped = (tripId: string, old: string) => id(`${tripId}:${old}`);
 
-  const hh = randomUUID();
-  const out = ["begin;", insert("public.households", { id: hh, name: opts.household })];
-  for (const m of opts.members) {
-    out.push(insert("private.allowed_emails", { email: m.email.toLowerCase(), household_id: hh, display_name: m.name, role: m.role }));
-  }
+  const email = lit(opts.ownerEmail.trim().toLowerCase());
+  const owner = `(select id from auth.users where lower(email) = ${email})`;
+  const out = [
+    "begin;",
+    `do $$ begin if ${owner} is null then raise exception 'sign up with ${email.slice(1, -1).replace(/'/g, "")} first'; end if; end $$;`,
+  ];
 
   for (const t of trips) {
     const tid = id(t.id);
     out.push(
       insert("public.trips", {
-        id: tid, household_id: hh, name: t.name, stage: t.stage, start_date: t.startDate || null,
+        id: tid, owner_id: new Raw(owner), name: t.name, stage: t.stage, start_date: t.startDate || null,
         end_date: t.endDate || null, timezone: t.timezone, currency: t.currency, people: t.people, summary: t.summary,
       }),
     );

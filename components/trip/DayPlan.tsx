@@ -23,7 +23,7 @@ export function DayPlan({
   selectedId?: string;
   onDay: (d: Day) => void;
   onOpen: (stopId: string) => void;
-  onAdd: () => void;
+  onAdd?: () => void; // absent when you can only view the trip
   onRain: () => void;
 }) {
   const bookings = new Map(trip.bookings.map((b) => [b.id, b]));
@@ -94,10 +94,12 @@ export function DayPlan({
             </ol>
           )}
 
-          <button onClick={onAdd} className="press mt-3 inline-flex items-center gap-1.5 py-2 text-[15px] font-medium text-accent">
-            <Plus size={17} />
-            Add stop
-          </button>
+          {onAdd && (
+            <button onClick={onAdd} className="press mt-3 inline-flex items-center gap-1.5 py-2 text-[15px] font-medium text-accent">
+              <Plus size={17} />
+              Add stop
+            </button>
+          )}
 
           {dayNotes.length > 0 && (
             <section className="mt-4">

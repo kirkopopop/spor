@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { refreshHousehold, savePrefs, useHousehold, usePrefs } from "@/lib/store";
+import { refreshPeople, savePrefs, usePeople, usePrefs } from "@/lib/store";
 import { hasSupabase } from "@/lib/supabase/env";
 import { supabase } from "@/lib/supabase/client";
 import type { Trip } from "@/lib/types";
@@ -10,22 +10,19 @@ import { Sheet } from "./Sheet";
 import { CopyIcon } from "./icons";
 import { field, primaryButton } from "./Forms";
 
-type Invite = { email: string; display_name: string };
 type Grant = { client: { id: string; name: string }; scopes?: string[]; granted_at?: string };
-type SheetState = { kind: "name" } | { kind: "invite" } | { kind: "delete" } | { kind: "connect" };
+type SheetState = { kind: "name" } | { kind: "password" } | { kind: "delete" } | { kind: "connect" };
 
 const CONNECTOR_PATH = "/api/mcp";
 
 export function SettingsScreen() {
-  const { members, me, email } = useHousehold();
+  const { members, me, email } = usePeople();
   const prefs = usePrefs();
-  const [invites, setInvites] = useState<Invite[]>([]);
   const [grants, setGrants] = useState<Grant[] | undefined>();
   const [sheet, setSheet] = useState<SheetState>();
   const [notice, setNotice] = useState<string>();
   const [copied, setCopied] = useState(false);
   const meMember = members.find((m) => m.userId === me);
-  const isOwner = meMember?.role === "owner";
   // The address is this site's own origin, known only in the browser (server renders the path).
   const origin = useSyncExternalStore(
     () => () => {},
@@ -36,8 +33,7 @@ export function SettingsScreen() {
 
   const load = useCallback(async () => {
     if (!hasSupabase) return setGrants([]);
-    const [inv, gr] = await Promise.all([supabase().rpc("list_invites"), supabase().auth.oauth.listGrants()]);
-    if (!inv.error) setInvites((inv.data as Invite[]) ?? []);
+    const gr = await supabase().auth.oauth.listGrants();
     setGrants(gr.error ? [] : ((gr.data as unknown as Grant[]) ?? []));
   }, []);
   useEffect(() => {
@@ -50,7 +46,7 @@ export function SettingsScreen() {
     const { error } = await fn();
     setNotice(error ? error.message : done);
     if (!error) {
-      await Promise.all([load(), refreshHousehold()]);
+      await Promise.all([load(), refreshPeople()]);
     }
     return !error;
   }
@@ -84,6 +80,9 @@ export function SettingsScreen() {
         <Row trailing={<span className="block max-w-48 truncate">{email}</span>}>
           <span className="text-[16px]">Email</span>
         </Row>
+        <Row onClick={() => setSheet({ kind: "password" })} chevron>
+          <span className="text-[16px]">Password</span>
+        </Row>
         <Row
           onClick={async () => {
             await supabase().auth.signOut();
@@ -94,53 +93,6 @@ export function SettingsScreen() {
         >
           <span className="text-[16px] text-accent">Sign out</span>
         </Row>
-      </Group>
-
-      <Group title="Household">
-        {members.map((m) => (
-          <Row
-            key={m.userId}
-            trailing={
-              m.userId === me ? (
-                <span className="text-[14px]">{m.role === "owner" ? "Owner · you" : "You"}</span>
-              ) : isOwner ? (
-                <button
-                  className="text-[15px] text-danger"
-                  onClick={() => run(() => supabase().rpc("remove_member", { p_user: m.userId }), `${m.name} removed.`)}
-                >
-                  Remove
-                </button>
-              ) : (
-                <span className="text-[14px]">{m.role === "owner" ? "Owner" : "Member"}</span>
-              )
-            }
-          >
-            <span className="text-[16px]">{m.name}</span>
-          </Row>
-        ))}
-        {invites.map((i) => (
-          <Row
-            key={i.email}
-            trailing={
-              <button className="text-[15px] text-danger" onClick={() => run(() => supabase().rpc("revoke_invite", { p_email: i.email }), "Invite revoked.")}>
-                Revoke
-              </button>
-            }
-          >
-            <div className="text-[16px]">{i.display_name}</div>
-            <div className="text-[13px] text-muted">Invited · {i.email}</div>
-          </Row>
-        ))}
-        {members.length === 0 && invites.length === 0 && !isOwner && (
-          <Row>
-            <span className="text-[15px] text-muted">No household yet.</span>
-          </Row>
-        )}
-        {isOwner && (
-          <Row onClick={() => setSheet({ kind: "invite" })}>
-            <span className="text-[16px] text-accent">Invite someone</span>
-          </Row>
-        )}
       </Group>
 
       <Group title="Claude">
@@ -251,7 +203,7 @@ export function SettingsScreen() {
         </Row>
       </Group>
 
-      <Group footer={isOwner && members.length > 1 ? "Remove the other members first to delete your account." : "Deletes your account and your sign-in. Trips stay with the household."}>
+      <Group footer="Trips are shared one by one: open a trip and tap Share. Deleting your account removes the trips you own, your flights and your places; trips others shared with you stay theirs.">
         <Row onClick={() => setSheet({ kind: "delete" })}>
           <span className="text-[16px] text-danger">Delete account</span>
         </Row>
@@ -266,11 +218,10 @@ export function SettingsScreen() {
             }}
           />
         )}
-        {sheet?.kind === "invite" && (
-          <InviteForm
-            onSave={async (mail, name) => {
-              if (await run(() => supabase().rpc("invite_member", { p_email: mail, p_name: name }), `${name} can now sign in with ${mail}.`))
-                window.history.back();
+        {sheet?.kind === "password" && (
+          <PasswordForm
+            onSave={async (password) => {
+              if (await run(() => supabase().auth.updateUser({ password }), "Password saved. You can now sign in with your email and password.")) window.history.back();
             }}
           />
         )}
@@ -280,15 +231,17 @@ export function SettingsScreen() {
             <ol className="flex list-decimal flex-col gap-2.5 pl-5 text-[16px] leading-relaxed text-ink-2">
               <li>In claude.ai, open Settings → Connectors.</li>
               <li>Add custom connector, name it tur, and paste the connector address.</li>
-              <li>Sign in with your tur email and tap Allow.</li>
+              <li>Sign in to tur and tap Allow.</li>
             </ol>
-            <p className="text-[15px] text-muted">Everyone in the household connects their own Claude.</p>
+            <p className="text-[15px] text-muted">Claude sees what you see: your trips, the ones shared with you, and your flights.</p>
           </div>
         )}
         {sheet?.kind === "delete" && (
           <div className="flex flex-col gap-3 pr-10">
             <h3 className="text-[22px] font-bold tracking-[-0.02em]">Delete your account?</h3>
-            <p className="text-[15px] leading-relaxed text-ink-2">This removes your sign-in and can&rsquo;t be undone. Trips stay with the household.</p>
+            <p className="text-[15px] leading-relaxed text-ink-2">
+              This removes your sign-in, the trips you own (for everyone they&rsquo;re shared with), your flights and your places. It can&rsquo;t be undone.
+            </p>
             <button
               className="press h-12 rounded-xl bg-danger text-[16px] font-semibold text-on-fill"
               onClick={async () => {
@@ -330,29 +283,33 @@ function NameForm({ current, onSave }: { current: string; onSave: (name: string)
   );
 }
 
-function InviteForm({ onSave }: { onSave: (email: string, name: string) => void }) {
-  const [mail, setMail] = useState("");
-  const [name, setName] = useState("");
-  const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail.trim()) && name.trim().length > 0;
+function PasswordForm({ onSave }: { onSave: (password: string) => void }) {
+  const [password, setPassword] = useState("");
+  const valid = password.length >= 8;
   return (
     <form
       className="flex flex-col gap-3 pr-10"
       onSubmit={(e) => {
         e.preventDefault();
-        if (valid) onSave(mail.trim().toLowerCase(), name.trim());
+        if (valid) onSave(password);
       }}
     >
-      <h3 className="text-[22px] font-bold tracking-[-0.02em]">Invite someone</h3>
+      <h3 className="text-[22px] font-bold tracking-[-0.02em]">Password</h3>
+      <p className="text-[15px] text-muted">Set or change the password for signing in with your email. Google sign-in keeps working.</p>
       <label>
-        <span className="sr-only">Name</span>
-        <input autoFocus placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className={field} maxLength={60} />
-      </label>
-      <label>
-        <span className="sr-only">Email</span>
-        <input type="email" inputMode="email" autoComplete="off" placeholder="Email" value={mail} onChange={(e) => setMail(e.target.value)} className={field} />
+        <span className="sr-only">New password</span>
+        <input
+          autoFocus
+          type="password"
+          autoComplete="new-password"
+          placeholder="New password (8+ characters)"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className={field}
+        />
       </label>
       <button type="submit" disabled={!valid} className={primaryButton}>
-        Invite
+        Save
       </button>
     </form>
   );

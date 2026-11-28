@@ -98,7 +98,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
   async function activity(tripId: string, since?: string) {
     let q = sb.from("activity_log").select("kind, target_id, patch, at, actor").eq("trip_id", tripId).order("at", { ascending: false }).limit(50);
     if (since) q = q.gt("at", since);
-    const [{ data: rows }, { data: members }] = await Promise.all([q, sb.from("household_members").select("user_id, display_name")]);
+    const [{ data: rows }, { data: members }] = await Promise.all([q, sb.from("profiles").select("user_id, display_name")]);
     const names = new Map((members ?? []).map((m) => [m.user_id, m.display_name]));
     return (rows ?? []).map((r) => ({ at: r.at, who: names.get(r.actor) ?? "someone", kind: r.kind, target_id: r.target_id, change: r.patch }));
   }
@@ -113,10 +113,22 @@ export function buildServer(sb: SupabaseClient, userId: string) {
 
   server.registerTool(
     "list_trips",
-    { title: "List trips", description: "All trips in the household: id, name, stage, dates.", annotations: { readOnlyHint: true } },
+    {
+      title: "List trips",
+      description:
+        "Trips you own and trips shared with you: id, name, stage, dates, and your access (owner, editor, viewer). Viewers can read a trip but not change it.",
+      annotations: { readOnlyHint: true },
+    },
     async () => {
-      const { data, error } = await sb.from("trips").select("id, name, stage, start_date, end_date, people").order("start_date");
-      return error ? fail([error.message]) : ok(data);
+      const { data, error } = await sb.from("trips").select("id, name, stage, start_date, end_date, people, trip_members(user_id, role)").order("start_date");
+      if (error) return fail([error.message]);
+      return ok(
+        (data ?? []).map(({ trip_members, ...t }) => ({
+          ...t,
+          my_access: (trip_members as { user_id: string; role: string }[]).find((m) => m.user_id === userId)?.role ?? "owner",
+          shared_with: (trip_members as unknown[]).length - 1,
+        })),
+      );
     },
   );
 
@@ -134,7 +146,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       if (error) return fail([error.message]);
       if (!data) return fail([`trip ${trip_id} not found (use list_trips)`]);
       const trip = rowsToTrip(data as TripRow);
-      const { data: members } = await sb.from("household_members").select("user_id, display_name");
+      const { data: members } = await sb.from("profiles").select("user_id, display_name");
       const names = new Map((members ?? []).map((m) => [m.user_id, m.display_name]));
       const stopName = new Map(trip.days.flatMap((d) => d.stops.map((s) => [s.id, `${d.date} ${s.time} ${s.name}`] as const)));
       const dayDate = new Map(trip.days.map((d) => [d.id, d.date]));
@@ -169,7 +181,8 @@ export function buildServer(sb: SupabaseClient, userId: string) {
     "create_trip",
     {
       title: "Create trip",
-      description: "Create a trip in the household. Days are created for every date from start to end.",
+      description:
+        "Create a trip owned by the signed-in person (private until shared; use share_trip). Days are created for every date from start to end.",
       inputSchema: {
         name: z.string().min(1).max(120),
         start_date: DATE,
@@ -183,9 +196,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
     },
     async (input) => {
       if (input.end_date < input.start_date) return fail(["end_date is before start_date"]);
-      const { data: m } = await sb.from("household_members").select("household_id").eq("user_id", userId).limit(1).maybeSingle();
-      if (!m) return fail(["you are not in a household"]);
-      const { data: trip, error } = await sb.from("trips").insert({ ...input, household_id: m.household_id }).select("id").single();
+      const { data: trip, error } = await sb.from("trips").insert(input).select("id").single();
       if (error) return fail([error.message]);
       await addMissingDays(trip.id, input.start_date, input.end_date);
       await log(trip.id, "claude.create_trip", { name: input.name });
@@ -429,13 +440,13 @@ export function buildServer(sb: SupabaseClient, userId: string) {
     {
       title: "List flights",
       description:
-        "Every flight the household has logged for travel stats: id, who, date, from and to (IATA), km, air time in minutes (null = estimated from distance), airline (null = not given).",
+        "Flights for travel stats: the signed-in person's own, plus any they logged for someone they share a trip with. id, who, date, from and to (IATA), km, air time in minutes (null = estimated from distance), airline (null = not given).",
       annotations: { readOnlyHint: true },
     },
     async () => {
       const [{ data, error }, { data: members }] = await Promise.all([
         sb.from("flights").select("id, user_id, flown_on, from_code, to_code, km, minutes, airline").order("flown_on"),
-        sb.from("household_members").select("user_id, display_name"),
+        sb.from("profiles").select("user_id, display_name"),
       ]);
       if (error) return fail([error.message]);
       const names = new Map((members ?? []).map((m) => [m.user_id, m.display_name]));
@@ -450,7 +461,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
     {
       title: "Log flights",
       description:
-        "Add flights to the travellers' travel stats (flights, air time, km, countries flown to). Log each leg of a connection separately, one row per person per leg. Call list_flights first so a flight isn't logged twice. Use when a flight is booked or the travellers tell you about past flights.",
+        "Add flights to travel stats (flights, air time, km, countries flown to). Log each leg of a connection separately, one row per person per leg. Flights are per person: you can log for the signed-in person and for anyone on a trip they can edit (they must have a tur account on that trip). Call list_flights first so a flight isn't logged twice. Use when a flight is booked or the travellers tell you about past flights.",
       inputSchema: {
         flights: z
           .array(
@@ -460,7 +471,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
               to: z.string().regex(/^[A-Za-z]{3}$/),
               minutes: z.number().int().min(1).max(1440).optional().describe("Scheduled air time; omit to estimate from distance"),
               airline: z.string().trim().min(1).max(60).optional().describe("Airline operating the flight, e.g. SAS, Norwegian"),
-              people: z.array(z.string()).optional().describe("First names of who flew; defaults to the signed-in person"),
+              people: z.array(z.string()).optional().describe("First names of who flew (tur accounts on a trip with you); defaults to the signed-in person"),
             }),
           )
           .min(1)
@@ -468,7 +479,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       },
     },
     async ({ flights }) => {
-      const { data: members } = await sb.from("household_members").select("user_id, display_name");
+      const { data: members } = await sb.from("profiles").select("user_id, display_name");
       const first = (n: string) => n.trim().toLowerCase().split(/\s+/)[0];
       const byName = (n: string) => (members ?? []).find((m) => first(m.display_name) === first(n))?.user_id as string | undefined;
       const errors: string[] = [];
@@ -478,7 +489,7 @@ export function buildServer(sb: SupabaseClient, userId: string) {
         if (!from) errors.push(`flight ${i + 1}: no airport ${f.from}`);
         if (!to) errors.push(`flight ${i + 1}: no airport ${f.to}`);
         const who: [string, string | undefined][] = f.people?.length ? f.people.map((p) => [p, byName(p)]) : [["you", userId]];
-        for (const [p, id] of who) if (!id) errors.push(`flight ${i + 1}: ${p} is not in the household`);
+        for (const [p, id] of who) if (!id) errors.push(`flight ${i + 1}: ${p} isn't on any trip you can edit (share a trip with them first, or log it for yourself)`);
         if (!from || !to) return [];
         const between = flightBetween(from, to);
         return who.map(([, id]) => ({
@@ -511,6 +522,28 @@ export function buildServer(sb: SupabaseClient, userId: string) {
       const { data, error } = await sb.from("flights").delete().eq("id", id).select("id");
       if (error) return fail([error.message]);
       return data?.length ? ok({ removed: true }) : fail([`flight ${id} not found (use list_flights)`]);
+    },
+  );
+
+  server.registerTool(
+    "share_trip",
+    {
+      title: "Share a trip",
+      description:
+        "Share a trip the signed-in person owns with someone by email, able to edit or only view. If they have a tur account the trip appears for them at once; otherwise it waits until they sign up with that email. Only do this when the person asks to share; get_trip shows who it's already shared with (trip.members).",
+      inputSchema: {
+        trip_id: z.string().uuid(),
+        email: z.string().email(),
+        access: z.enum(["edit", "view"]),
+      },
+    },
+    async ({ trip_id, email, access }) => {
+      const { data, error } = await sb.rpc("share_trip", { p_trip: trip_id, p_email: email, p_role: access === "edit" ? "editor" : "viewer" });
+      if (error) return fail([error.message]);
+      return ok({
+        result: data,
+        note: data === "added" ? "They can see it in tur now." : "No tur account with that email yet: tell them to sign up with it.",
+      });
     },
   );
 

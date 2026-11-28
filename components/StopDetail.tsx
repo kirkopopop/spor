@@ -4,6 +4,7 @@ import type { Booking, Stop, Trip } from "@/lib/types";
 import { clockTime, leaveBy, mapsSearch, MODE_LABEL, shiftTime, showTime, travelMinutes } from "@/lib/format";
 import { Back, Check, Close, Directions, Mode, NoteIcon } from "./icons";
 import { RichText } from "./RichText";
+import { useCanEdit } from "@/lib/store";
 import { NoteForm } from "./Forms";
 import { NoteItem } from "./TripTabs";
 
@@ -30,6 +31,7 @@ export function StopDetail({
   onEdit: () => void;
 }) {
   const notes = (trip.notes ?? []).filter((n) => n.stopId === stop.id);
+  const canEdit = useCanEdit(trip);
   const leave = leaveBy(stop);
   const maps = stop.mapsQuery
     ? mapsSearch(stop.mapsQuery)
@@ -92,15 +94,19 @@ export function StopDetail({
         <ActionButton href={maps} label="Directions" primary>
           <Directions size={19} />
         </ActionButton>
-        <ActionButton onClick={() => onShift(shiftTime(stop.time, -15))} label="Earlier">
-          <span className="text-[15px] font-semibold">−15</span>
-        </ActionButton>
-        <ActionButton onClick={() => onShift(shiftTime(stop.time, 15))} label="Later">
-          <span className="text-[15px] font-semibold">+15</span>
-        </ActionButton>
-        <ActionButton onClick={onEdit} label="Edit">
-          <NoteIcon size={18} />
-        </ActionButton>
+        {canEdit && (
+          <>
+            <ActionButton onClick={() => onShift(shiftTime(stop.time, -15))} label="Earlier">
+              <span className="text-[15px] font-semibold">−15</span>
+            </ActionButton>
+            <ActionButton onClick={() => onShift(shiftTime(stop.time, 15))} label="Later">
+              <span className="text-[15px] font-semibold">+15</span>
+            </ActionButton>
+            <ActionButton onClick={onEdit} label="Edit">
+              <NoteIcon size={18} />
+            </ActionButton>
+          </>
+        )}
       </div>
 
       {stop.go && (

@@ -100,7 +100,7 @@ type Travel = ReturnType<typeof useTravel>;
 
 /** Everything about where someone went and how far they flew, by year, with their flights. */
 function TravelSheet({ today, travel }: { today: string; travel: Travel }) {
-  const { me, people, trips, beenOf, flightsOf, nameOf } = travel;
+  const { me, people, companions, trips, beenOf, flightsOf, nameOf } = travel;
   const [person, setPerson] = useState(me ?? "");
   const [range, setRange] = useState<string>(ALL);
   const [editing, setEditing] = useState<Flight | "new">();
@@ -127,9 +127,9 @@ function TravelSheet({ today, travel }: { today: string; travel: Travel }) {
       <FlightForm
         flight={editing === "new" ? undefined : editing}
         airports={airports}
-        people={people.map((p) => ({ userId: p.userId, name: p.userId === me ? "Me" : firstName(nameOf(p.userId)) }))}
+        people={companions}
         defaultPerson={person}
-        knownAirlines={airlineCounts(travel.people.flatMap((p) => flightsOf(p.userId))).map(([a]) => a)}
+        knownAirlines={airlineCounts(flightsOf(me)).map(([a]) => a)}
         today={today}
         onDone={() => setEditing(undefined)}
       />

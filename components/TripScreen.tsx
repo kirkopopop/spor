@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { editStop, useTrip } from "@/lib/store";
+import { editStop, useCanEdit, useTrip } from "@/lib/store";
 import { useUrlParam } from "@/lib/useUrlParam";
 import { dateRange, todayIn, toBookCount } from "@/lib/format";
 import { nowNext, tripClock } from "@/lib/live";
@@ -21,7 +21,8 @@ import { StopDetail } from "./StopDetail";
 import { BookTab, MoneyTab, NotesTab } from "./TripTabs";
 import { Sheet } from "./Sheet";
 import { StopForm } from "./Forms";
-import { Back } from "./icons";
+import { Back, PeopleIcon } from "./icons";
+import { ShareSheet } from "./ShareSheet";
 import { DestinationMark } from "./Destination";
 import { destinationOf } from "@/lib/destination";
 
@@ -29,7 +30,7 @@ const CARD_W = 380; // the stop card over the map on wide screens
 
 export type Tab = "today" | "memory" | "plan" | "book" | "money" | "notes";
 const LABEL: Record<Tab, string> = { today: "Today", memory: "Memory", plan: "Plan", book: "Bookings", money: "Money", notes: "Notes" };
-type Modal = { kind: "stop-form"; stopId?: string } | { kind: "rain" };
+type Modal = { kind: "stop-form"; stopId?: string } | { kind: "rain" } | { kind: "share" };
 
 /** A trip: the map on top, the plan in a sheet over it. Tab, day and open stop live in the address. */
 export function TripScreen() {
@@ -44,6 +45,7 @@ export function TripScreen() {
   const [modal, setModal] = useState<Modal>();
   const onHeight = useCallback((px: number) => setSheetPx(px), []);
   const wide = useWide();
+  const canEdit = useCanEdit(trip);
 
   const clock = trip ? tripClock(trip, new Date(), preview) : undefined;
   const today = trip ? todayIn(trip.timezone) : "";
@@ -117,6 +119,7 @@ export function TripScreen() {
   };
   const toBook = toBookCount(trip);
   const others = trip.people.join(", ");
+  const sharedWith = (trip.members ?? []).filter((m) => m.role !== "owner").length;
 
   const header = (
     <div className="pb-3">
@@ -128,11 +131,20 @@ export function TripScreen() {
         <span className="mt-0.5 [animation:mark-in_420ms_cubic-bezier(.34,1.56,.64,1)_both]">
           <DestinationMark destination={destinationOf(trip)} size={32} />
         </span>
-        <h1 className="line-clamp-2 text-[24px] leading-tight font-bold tracking-[-0.02em] text-balance">{trip.name}</h1>
+        <h1 className="line-clamp-2 flex-1 text-[24px] leading-tight font-bold tracking-[-0.02em] text-balance">{trip.name}</h1>
+        <button
+          onClick={() => setModal({ kind: "share" })}
+          aria-label={sharedWith ? `Shared with ${sharedWith} ${sharedWith === 1 ? "person" : "people"}` : "Share trip"}
+          className="press -mr-1 flex h-9 shrink-0 items-center gap-1 rounded-full bg-soft px-3 text-[14px] font-medium text-ink-2"
+        >
+          <PeopleIcon size={17} />
+          {sharedWith > 0 ? sharedWith + 1 : "Share"}
+        </button>
       </div>
       <p className="mt-0.5 truncate text-[14px] text-muted">
         {trip.startDate ? dateRange(trip.startDate, trip.endDate) : "No dates yet"}
         {others && ` · ${others}`}
+        {!canEdit && " · View only"}
       </p>
       <div role="tablist" aria-label="Trip" className="mt-3 grid max-w-[440px] rounded-xl bg-soft p-0.5" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
         {tabs.map((t) => (
@@ -204,7 +216,7 @@ export function TripScreen() {
               setDayParam(d.date);
             }}
             onOpen={open}
-            onAdd={() => setModal({ kind: "stop-form" })}
+            onAdd={canEdit ? () => setModal({ kind: "stop-form" }) : undefined}
             onRain={() => setModal({ kind: "rain" })}
           />
         ) : tab === "book" ? (
@@ -240,7 +252,8 @@ export function TripScreen() {
         </aside>
       )}
 
-      <Sheet open={!!modal} onClose={() => setModal(undefined)} label={modal?.kind === "rain" ? "If it rains" : "Stop"}>
+      <Sheet open={!!modal} onClose={() => setModal(undefined)} label={modal?.kind === "rain" ? "If it rains" : modal?.kind === "share" ? "Share trip" : "Stop"}>
+        {modal?.kind === "share" && <ShareSheet trip={trip} />}
         {modal?.kind === "stop-form" && day && (
           <StopForm
             key={modal.stopId ?? "new"}

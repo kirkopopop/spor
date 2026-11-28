@@ -1,4 +1,4 @@
-import type { Booking, Day, Expense, Note, SpareIdea, Stop, Trip } from "./types";
+import type { Booking, Day, Expense, Member, Note, Role, SpareIdea, Stop, Trip } from "./types";
 import { dayMinute } from "./ops";
 
 // Row shapes as Supabase returns them (snake_case, nulls, numerics as strings).
@@ -33,8 +33,9 @@ export type ExpenseRow = {
   id: string; trip_id: string; amount: Num; currency: Trip["currency"]; category: string; paid_by: string | null;
   stop_id: string | null; note: string | null; spent_at: string;
 };
+export type MemberRow = { user_id: string; role: Role; profiles?: { display_name: string } | null };
 export type TripRow = {
-  id: string; household_id: string; name: string; stage: Trip["stage"]; start_date: string | null;
+  id: string; owner_id?: string; trip_members?: MemberRow[]; name: string; stage: Trip["stage"]; start_date: string | null;
   end_date: string | null; timezone: string; currency: Trip["currency"]; people: string[]; summary: string | null;
   revision?: number;
   days: DayRow[]; stops: StopRow[]; bookings: BookingRow[]; budget_lines: BudgetRow[]; spare_ideas: SpareRow[];
@@ -42,8 +43,10 @@ export type TripRow = {
 };
 
 /** PostgREST select that returns one TripRow per trip. */
-export const TRIP_SELECT = "*, days(*), stops(*), bookings(*), budget_lines(*), spare_ideas(*), notes(*), expenses(*)";
+export const TRIP_SELECT =
+  "*, days(*), stops(*), bookings(*), budget_lines(*), spare_ideas(*), notes(*), expenses(*), trip_members(user_id, role, profiles(display_name))";
 
+const ROLE_ORDER: Record<Role, number> = { owner: 0, editor: 1, viewer: 2 };
 const opt = <T>(v: T | null | undefined) => (v == null ? undefined : v);
 // Drops undefined only; optional flags opt out with `|| undefined` at the call site.
 const clean = <T extends object>(o: T): T =>
@@ -106,6 +109,12 @@ export function rowsToTrip(r: TripRow): Trip {
     currency: r.currency,
     people: r.people,
     summary: opt(r.summary),
+    ownerId: opt(r.owner_id),
+    members: r.trip_members
+      ? [...r.trip_members]
+          .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])
+          .map((m): Member => ({ userId: m.user_id, name: m.profiles?.display_name ?? "", role: m.role }))
+      : undefined,
     days,
     bookings: [...r.bookings]
       .sort((a, b) => a.sort - b.sort)

@@ -6,7 +6,7 @@ import { hasSupabase } from "./supabase/env";
 import { supabase } from "./supabase/client";
 import type { Airport, Flight } from "./flights";
 
-// Flights, logged by hand or by someone's Claude: read and changed by the whole household (one
+// Flights, logged by hand or by someone's Claude: each person's own, plus any you logged for someone on a trip with you (one
 // booking covers both). Kept on the device so stats show offline; like places, changing them
 // needs a connection and says so.
 
@@ -25,6 +25,7 @@ type Row = {
 type State = { loaded: boolean; flights: Flight[] };
 export type FlightInput = Omit<Flight, "id">;
 
+let cacheKey: string | undefined; // set once the signed-in person is known
 const idb = typeof indexedDB === "undefined" ? undefined : createStore("spor-flights", "rows");
 const DEV_KEY = "spor-flights-dev"; // local prototype without Supabase
 const SELECT = "id, user_id, flown_on, from_code, to_code, from_country, to_country, km, minutes, airline";
@@ -34,7 +35,7 @@ const listeners = new Set<() => void>();
 const emit = (next: Partial<State>) => {
   state = { ...state, ...next };
   listeners.forEach((l) => l());
-  if (idb && hasSupabase) void set("rows", state.flights, idb).catch(() => {});
+  if (idb && hasSupabase && cacheKey) void set(cacheKey, state.flights, idb).catch(() => {});
 };
 const fromRow = (r: Row): Flight => ({
   id: r.id,
@@ -82,7 +83,10 @@ async function start() {
   if (started || typeof window === "undefined") return;
   started = true;
   if (!hasSupabase) return emit({ loaded: true, flights: dev.read() });
-  const cached = idb ? await get<Flight[]>("rows", idb).catch(() => undefined) : undefined;
+  // Each account's own copy on this phone: someone else signing in never sees the last person's.
+  const { data: auth } = await supabase().auth.getSession();
+  cacheKey = `rows:${auth.session?.user.id ?? "anon"}`;
+  const cached = idb ? await get<Flight[]>(cacheKey, idb).catch(() => undefined) : undefined;
   if (cached) emit({ loaded: true, flights: cached });
   const { data, error } = await supabase().from("flights").select(SELECT).order("flown_on");
   if (!error && data) emit({ flights: (data as Row[]).map(fromRow) });

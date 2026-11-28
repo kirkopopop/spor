@@ -30,7 +30,7 @@ const trip: Trip = {
 };
 
 describe("seedSql", () => {
-  const sql = seedSql([trip], { household: "Kopytov", members: [{ email: "Me@Example.com", name: "Kirill", role: "owner" }] });
+  const sql = seedSql([trip], { ownerEmail: "Me@Example.com" });
 
   it("escapes quotes", () => {
     expect(sql).toContain("'Kirill''s trip'");
@@ -47,12 +47,13 @@ describe("seedSql", () => {
   it("writes a stop without options as an empty JSON list, and empty text arrays as {}", () => {
     expect(sql).toMatch(/'\[\]'::jsonb, false, 0\);/);
     expect(sql).not.toContain("array[]::text[]");
-    const munich = seedSql([{ ...trip, days: [{ ...trip.days[0], rain: [] }] }], { household: "H", members: [] });
+    const munich = seedSql([{ ...trip, days: [{ ...trip.days[0], rain: [] }] }], { ownerEmail: "a@b.co" });
     expect(munich).toContain("'{}'::text[]");
   });
 
-  it("lowercases allowlisted emails and wraps everything in one transaction", () => {
-    expect(sql).toContain("'me@example.com'");
+  it("gives the trips to the account with that email, lowercased, in one transaction", () => {
+    expect(sql).toContain("insert into public.trips (id, owner_id, name");
+    expect(sql).toMatch(/\(select id from auth\.users where lower\(email\) = 'me@example\.com'\)/);
     expect(sql.trim().startsWith("begin;")).toBe(true);
     expect(sql.trim().endsWith("commit;")).toBe(true);
   });

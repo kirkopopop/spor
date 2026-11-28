@@ -3,7 +3,8 @@ import { rowsToTrip, type TripRow } from "./db";
 
 const row: TripRow = {
   id: "t1",
-  household_id: "h",
+  owner_id: "k",
+  trip_members: [{ user_id: "k", role: "owner", profiles: { display_name: "Kirill" } }],
   name: "Munich",
   stage: "planning",
   start_date: "2026-12-21",

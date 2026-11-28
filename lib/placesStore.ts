@@ -6,13 +6,14 @@ import { hasSupabase } from "./supabase/env";
 import { supabase } from "./supabase/client";
 import type { Place } from "./places";
 
-// Places been, logged by hand: read for the whole household (Me / Tanya / Both), changed only by
+// Places been, logged by hand: private to each account; read and changed only by
 // their owner (the database enforces both). Kept on the device so the globe shows them offline.
 // Unlike trips there's no outbox: logging a place needs a connection, and says so.
 
 type Row = { id: string; user_id: string; kind: "country" | "city"; country: string; name: string; lat: number | null; lng: number | null };
 type State = { loaded: boolean; rows: Place[] };
 
+let cacheKey: string | undefined; // set once the signed-in person is known
 const idb = typeof indexedDB === "undefined" ? undefined : createStore("spor-places", "rows");
 const DEV_KEY = "spor-places-dev"; // local prototype without Supabase
 const SELECT = "id, user_id, kind, country, name, lat, lng";
@@ -22,7 +23,7 @@ const listeners = new Set<() => void>();
 const emit = (next: Partial<State>) => {
   state = { ...state, ...next };
   listeners.forEach((l) => l());
-  if (idb && hasSupabase) void set("rows", state.rows, idb).catch(() => {});
+  if (idb && hasSupabase && cacheKey) void set(cacheKey, state.rows, idb).catch(() => {});
 };
 const fromRow = (r: Row): Place => ({ id: r.id, userId: r.user_id, kind: r.kind, country: r.country, name: r.name, lat: r.lat ?? undefined, lng: r.lng ?? undefined });
 
@@ -48,7 +49,10 @@ async function start() {
   if (started || typeof window === "undefined") return;
   started = true;
   if (!hasSupabase) return emit({ loaded: true, rows: dev.read() });
-  const cached = idb ? await get<Place[]>("rows", idb).catch(() => undefined) : undefined;
+  // Each account's own copy on this phone: someone else signing in never sees the last person's.
+  const { data: auth } = await supabase().auth.getSession();
+  cacheKey = `rows:${auth.session?.user.id ?? "anon"}`;
+  const cached = idb ? await get<Place[]>(cacheKey, idb).catch(() => undefined) : undefined;
   if (cached) emit({ loaded: true, rows: cached });
   await refresh();
   emit({ loaded: true });

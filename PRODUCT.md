@@ -10,7 +10,7 @@ Phone-first progressive web app (installable to the home screen, works offline),
 
 ## Users
 
-Households that travel together: today Kirill and Tanya (with their baby Oscar), with occasional guests invited to a single trip (e.g. a friend on a boys' trip). Over the next year the product should work for other households like theirs: couples and families who plan trips together and each use their own Claude.
+People who travel together, each with their own tur account: today Kirill and Tanya (with their baby Oscar), with friends and family added to single trips (e.g. a friend on a boys' trip, grandparents who follow along). Anyone can sign up; trips are shared one by one with specific people, who can edit or only view. Each person's flights and places been are their own.
 
 Two situations:
 
@@ -27,19 +27,19 @@ Planning happens in Claude, not in the app: tur is where the plan lives. Each tr
 
 ## Operating Context
 
-- Places been: each person keeps the countries and cities they've visited, shown on the Overview globe (Me / Tanya / Both). Ended tur trips count automatically for the people on them; earlier travel is logged by hand in a few taps.
+- Places been: each person keeps the countries and cities they've visited on their own Overview globe. Ended tur trips count automatically for the people on them; earlier travel is logged by hand in a few taps.
 - A trip moves through stages: Idea → Planning → Live → Memory. Memory is a recap tab on past trips (places reached, km on foot, spend, places not reached, the notes as a journal, the route as it happened); photos are not built yet.
 - Planning: day timeline with stops, travel between stops with leave-by times, "Pick one" options, bookings checklist, budget, rain plan per day, spare-time ideas per city, notes.
-- Live: Now/Next, tick stops, expenses split within the household, notes; offline with an edit queue that syncs.
+- Live: Now/Next, tick stops, expenses split among the people on the trip, notes; offline with an edit queue that syncs.
 - Hand edits in the app are light: pick an option, move a time, tick, add/edit/delete a stop, notes, expenses. Larger planning goes through Claude ("Ask Claude" links open claude.ai with the trip and day prefilled).
-- Accounts: magic-link email sign-in. Today sign-up is limited to an allowlist and one household exists.
+- Accounts: open sign-up with Google, email + password, or a magic link. A trip belongs to whoever created it; the owner shares it by email (can edit / can view). An email without an account gets the trip once it signs up and confirms that address. Flights can be logged for someone on a trip you can edit.
 
 ## Capabilities and Constraints
 
 - Stack: Next.js 16 (App Router, cache components), Supabase (Postgres with RLS, Auth, OAuth 2.1 server for the connector, Realtime), Vercel. Local-first client store in IndexedDB.
 - Data per trip: days, stops (time, kind fixed/normal/optional, travel, options, booking link), bookings, budget lines, spare ideas, expenses, notes, activity log, revision.
-- Settings must cover: household & invites (members, invite a member or a trip guest, remove), Claude connector (URL, status, connected apps, revoke), account (name, email, sign out, delete account), preferences (home currency, units, time format, default timezone, theme).
-- Open decisions (not built yet): self-serve onboarding and household creation for new households; trip-level guest roles; invitations by link/email; Memory photos (needs a private storage bucket); Places wishlist and Kit templates. Walking legs are routed by FOSSGIS's public OSRM (stop coordinates only); transit legs stay Claude's estimates.
+- Sharing lives on each trip (Share sheet: people, access, pending invites, leave). Settings cover: Claude connector (URL, status, connected apps, revoke), account (name, email, password, sign out, delete account), preferences (home currency, units, time format, default timezone, theme).
+- Open decisions (not built yet): invitations by link; invite emails sent by tur itself (today the owner tells the person); Memory photos (needs a private storage bucket); Places wishlist and Kit templates. Walking legs are routed by FOSSGIS's public OSRM (stop coordinates only); transit legs stay Claude's estimates.
 - English-only UI.
 
 ## Brand Commitments

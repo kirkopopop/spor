@@ -8,7 +8,8 @@ import { setClockFormat } from "./format";
 import { applyTheme, readThemePref, type ThemePref } from "./theme";
 import { hasSupabase } from "./supabase/env";
 import { supabase } from "./supabase/client";
-import type { Expense, Member, Note, Trip } from "./types";
+import { canEdit } from "./access";
+import type { Expense, Member, Note, Role, Trip } from "./types";
 
 /**
  * Local-first trip store. Screens read from the phone's copy (IndexedDB),
@@ -24,7 +25,7 @@ type State = {
   syncedAt?: number; // last successful refresh from the server
   snapshots: Trip[];
   outbox: Op[]; // edits not yet confirmed by the server
-  members: Member[]; // the household, for names and splitting expenses
+  members: Member[]; // you and everyone you share a trip with: names on notes, flights and expenses
   me?: string; // signed-in user id
   email?: string;
   prefs: Prefs;
@@ -74,9 +75,10 @@ async function pushOps(ops: Op[]): Promise<string[]> {
 
 async function fetchMembers(): Promise<Member[]> {
   if (!hasSupabase) return [];
-  const { data, error } = await supabase().from("household_members").select("user_id, display_name, role");
+  // The database shows only you and the people you're on a trip with.
+  const { data, error } = await supabase().from("profiles").select("user_id, display_name");
   if (error) throw error;
-  return data.map((m) => ({ userId: m.user_id, name: m.display_name, role: m.role }));
+  return data.map((m) => ({ userId: m.user_id, name: m.display_name }));
 }
 
 // The other phone's edits (and Claude's writes) arrive as change events; refetch shortly after.
@@ -88,7 +90,7 @@ function listenForChanges() {
     timer = setTimeout(sync, 400);
   };
   const channel = supabase().channel("tur-trips");
-  for (const table of ["trips", "days", "stops", "bookings", "expenses", "notes", "budget_lines", "spare_ideas"]) {
+  for (const table of ["trips", "trip_members", "days", "stops", "bookings", "expenses", "notes", "budget_lines", "spare_ideas"]) {
     channel.on("postgres_changes", { event: "*", schema: "public", table }, later);
   }
   channel.subscribe();
@@ -197,10 +199,15 @@ export function useSyncStatus() {
   return { online: s.online, pending: s.outbox.length, syncedAt: s.syncedAt };
 }
 
-/** The household and who is signed in: names for notes, and who pays for what. */
-export function useHousehold() {
+/** Who is signed in, and the people they travel with: names for notes, flights and who paid. */
+export function usePeople() {
   const s = useStore();
   return { members: s.members, me: s.me, email: s.email };
+}
+
+/** Whether the signed-in person can change this trip (owner or editor), not only view it. */
+export function useCanEdit(trip: Trip | undefined) {
+  return canEdit(trip, useStore().me);
 }
 
 export function usePrefs() {
@@ -219,24 +226,21 @@ export async function savePrefs(next: Partial<Prefs>) {
   }
 }
 
-/** Members changed in Settings: refresh names and roles now rather than at the next sync. */
-export const refreshHousehold = () => sync();
+/** Your name or a trip's sharing changed: refresh now rather than at the next sync. */
+export const refreshPeople = () => sync();
 
 /**
- * A new trip in the household: an idea without dates, a planning trip with them (one day
- * per date). Needs a connection; returns the new trip's id once it is on this phone.
+ * A new trip, yours: an idea without dates, a planning trip with them (one day per date).
+ * Share it from the trip afterwards. Needs a connection; returns the new trip's id.
  */
 export async function createTrip(input: { name: string; startDate?: string; endDate?: string; currency: Trip["currency"] }) {
   if (!hasSupabase) throw new Error("Sign in to create trips.");
   const sb = supabase();
-  const { data: member, error: mErr } = await sb.from("household_members").select("household_id").eq("user_id", state.me ?? "").limit(1).maybeSingle();
-  if (mErr || !member) throw new Error("You're not in a household yet.");
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Copenhagen";
   const myName = state.members.find((m) => m.userId === state.me)?.name;
   const { data: trip, error } = await sb
     .from("trips")
     .insert({
-      household_id: member.household_id,
       name: input.name,
       stage: input.startDate ? "planning" : "idea",
       start_date: input.startDate ?? null,
@@ -260,9 +264,51 @@ export async function createTrip(input: { name: string; startDate?: string; endD
   return trip.id as string;
 }
 
+// ── Sharing: each change needs a connection and refreshes the trip ────
+const sharingError = (e: { message: string }) =>
+  new Error(navigator.onLine ? e.message.charAt(0).toUpperCase() + e.message.slice(1) + "." : "Sharing needs a connection.");
+
+/** Shares a trip by email. 'added' when they have an account; 'invited' when it waits for them to sign up. */
+export async function shareTrip(tripId: string, email: string, role: Exclude<Role, "owner">): Promise<"added" | "invited"> {
+  const { data, error } = await supabase().rpc("share_trip", { p_trip: tripId, p_email: email, p_role: role });
+  if (error) throw sharingError(error);
+  await sync();
+  return data as "added" | "invited";
+}
+
+export async function setTripRole(tripId: string, userId: string, role: Exclude<Role, "owner">) {
+  const { error } = await supabase().rpc("set_trip_role", { p_trip: tripId, p_user: userId, p_role: role });
+  if (error) throw sharingError(error);
+  await sync();
+}
+
+/** The owner removes someone, or you take yourself off a trip someone shared with you. */
+export async function removeFromTrip(tripId: string, userId: string) {
+  const { error } = await supabase().rpc("remove_from_trip", { p_trip: tripId, p_user: userId });
+  if (error) throw sharingError(error);
+  if (userId === state.me) setState({ snapshots: state.snapshots.filter((t) => t.id !== tripId) });
+  await sync();
+}
+
+export type Invite = { email: string; role: Exclude<Role, "owner"> };
+/** Emails a trip is shared with that have no account yet (the owner's eyes only). */
+export async function listInvites(tripId: string): Promise<Invite[]> {
+  if (!hasSupabase) return [];
+  const { data, error } = await supabase().from("trip_invites").select("email, role").eq("trip_id", tripId).order("created_at");
+  if (error) throw sharingError(error);
+  return data as Invite[];
+}
+
+export async function revokeInvite(tripId: string, email: string) {
+  const { error } = await supabase().rpc("revoke_trip_invite", { p_trip: tripId, p_email: email });
+  if (error) throw sharingError(error);
+}
+
 // Every edit: queue it, show it at once, send it when there's signal.
 type OpBody = Op extends infer T ? (T extends Op ? Omit<T, "id" | "tripId" | "at"> : never) : never;
 function queue(tripId: string, body: OpBody) {
+  // Someone who can only view never queues an edit the server would refuse.
+  if (!canEdit(state.snapshots.find((t) => t.id === tripId), state.me)) return;
   const op = { ...body, id: crypto.randomUUID(), tripId, at: Date.now() } as Op;
   setState({ outbox: [...state.outbox, op] });
   void persist().then(sync);

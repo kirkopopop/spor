@@ -1,6 +1,6 @@
 // Usage: node scripts/seed-sql.ts <owner-email> [out.sql]
-// Turns every trip in data/seed/*.json into one SQL transaction (household,
-// sign-up allowlist, trips). Output is private: it stays under data/seed/ (gitignored).
+// Turns every trip in data/seed/*.json into one SQL transaction that gives them to the
+// account with that email (sign up first). Output is private: it stays under data/seed/ (gitignored).
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { seedSql } from "../lib/seedSql.ts";
@@ -17,5 +17,5 @@ const trips: Trip[] = readdirSync(dir)
   .filter((f) => f.endsWith(".json"))
   .map((f) => JSON.parse(readFileSync(join(dir, f), "utf8")));
 
-writeFileSync(out, seedSql(trips, { household: "Kopytov", members: [{ email, name: "Kirill", role: "owner" }] }));
+writeFileSync(out, seedSql(trips, { ownerEmail: email }));
 console.log(`${trips.map((t) => t.name).join(", ")} → ${out}`);
