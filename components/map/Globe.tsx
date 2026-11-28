@@ -191,7 +191,7 @@ export function Globe({
     let alive = true;
     (async () => {
       if (!m.getSource("been-countries")) {
-        const geo = (await import("@/assets/geo/countries-110m.json")).default;
+        const geo = (await import("@/assets/geo/countries-50m.json")).default;
         if (!alive || m.getSource("been-countries")) return;
         const firstLabel = m.getStyle().layers.find((l) => l.type === "symbol")?.id; // fill under the place names
         try {

@@ -41,7 +41,7 @@ export function FlightMap({ flights, airports, been }: { flights: Flight[]; airp
   const [geo, setGeo] = useState<Geo>();
   useEffect(() => {
     let live = true;
-    import("@/assets/geo/countries-110m.json").then((m) => live && setGeo(m.default as unknown as Geo));
+    import("@/assets/geo/countries-50m.json").then((m) => live && setGeo(m.default as unknown as Geo));
     return () => {
       live = false;
     };
